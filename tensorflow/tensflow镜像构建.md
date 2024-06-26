@@ -355,7 +355,8 @@ sh build-scripts.sh
 
 # 六、运行Docker容器
 
-docker-run.sh文件启动容器。
+## 6.1. 方式一：通过docker命令启动容器
+
 docker-run.sh文件内容如下:
 
 ```shell
@@ -370,6 +371,48 @@ docker run  -d  -ti \
 -p 8880:8888 \
 -p 6007:6006 \
 tensorflow:2.15.0-python3.8-cuda12.1.0-cudnn8-devel-ubuntu22.04
+```
+
+## 6.2. 方式二：如果是k8s集群，可以通过deployment部署容器
+
+部署命令：
+
+```shell
+kubectl apply -f your-deployment-file.yaml
+```
+
+tensorflow-deployment.yaml文件内容如下：
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tensorflow-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tensorflow
+  template:
+    metadata:
+      labels:
+        app: tensorflow
+    spec:
+      containers:
+      - name: tensorflow
+        image: tensorflow:2.15.0-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04
+        ports:
+        - containerPort: 22
+          hostPort: 2222
+        - containerPort: 8888
+          hostPort: 8888
+        - containerPort: 6006
+          hostPort: 6006
+        resources:
+          limits:
+            nvidia.com/gpu: "1" # 根据实际情况调整GPU资源限制
+        securityContext:
+          privileged: true # 如果需要使用GPU，可能需要设置为true
 ```
 
 # 七、验证镜像功能
@@ -438,15 +481,19 @@ with writer.as_default():
 python3 -c "import tensorflow as tf; print(tf.reduce_sum(tf.random.normal([1000, 1000])))"
 ![image-20240621153319920](assets/image-20240621153319920.png)
 
-# 八、构建镜像构建好的新镜像如下：
+# 八、构建好的新镜像
 
 | 镜像名     | tag                                                   | 镜像id       | 备注                                                         |
 | ---------- | ----------------------------------------------------- | ------------ | ------------------------------------------------------------ |
 | tensorflow | 2.15.0-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04 | 676d6aebe1cf | 1.     镜像tag中体现了Tensorflow、cuda、cudnn、python、ubuntu等版本信息<br>2.     安装常用包如vim、curl等<br>3.     增加root用户ssh登录，临时密码为111111<br/>4.     修改时区为中国标准时间<br/>5.     安装中文支持并生成中文locale<br/>6.     安装python库pandas、seaborn<br/>7.     增加ssh登入提示信息 |
 
+# 九、镜像目录说明
 
+1. 登入容器目录：/root
+2. jupyter工作目录：/root
+3. TensorBoard日志目录：/root/tensorboard-logs
 
-# 九、扩展说明
+# 十、扩展说明
 
 主要参考以下网站：
 

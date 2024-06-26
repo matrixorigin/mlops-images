@@ -61,7 +61,7 @@ autorestart=true
 redirect_stderr=true
 
 [program:tensorboard]
-command=tensorboard --host 0.0.0.0 --port 6006 --logdir /root/tensorboard-logs
+command=tensorboard --host 0.0.0.0 --port 6006 --logdir /root/tensorboard-logs --path_prefix /monitor
 directory=/root
 autostart=true
 autorestart=true
