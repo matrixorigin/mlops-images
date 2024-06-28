@@ -378,42 +378,100 @@ tensorflow:2.15.0-python3.8-cuda12.1.0-cudnn8-devel-ubuntu22.04
 部署命令：
 
 ```shell
-kubectl apply -f your-deployment-file.yaml
+kubectl apply -f your-deployment-example.yaml tensorflow-service-example.yaml
 ```
 
-tensorflow-deployment.yaml文件内容如下：
+文件名：tensorflow-deployment-example.yaml
+
+文件位置：./run-example/tensorflow-deployment-example.yaml
+
+作用：用tensorflow镜像在k8s集群中部署服务
+
+文件内容如下：
 
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tensorflow-deployment
+  name: tensorflow-example
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: tensorflow
+      app: tensorflow-example
   template:
     metadata:
       labels:
-        app: tensorflow
+        app: tensorflow-example
     spec:
+      # 测试时根据实际情况使用节点亲和性
+      # affinity:
+      #   nodeAffinity:
+      #     requiredDuringSchedulingIgnoredDuringExecution:
+      #       nodeSelectorTerms:
+      #       - matchExpressions:
+      #         - key: kubernetes.io/hostname
+      #           operator: In
+      #           values:
+      #           - hostname
       containers:
-      - name: tensorflow
-        image: tensorflow:2.15.0-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04
+      - image: tensorflow:2.15.0-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04
+        name: tensorflow-example
         ports:
         - containerPort: 22
-          hostPort: 2222
+          protocol: TCP
+          name: ssh
         - containerPort: 8888
-          hostPort: 8888
+          protocol: TCP
+          name: jupyterlab
         - containerPort: 6006
-          hostPort: 6006
+          protocol: TCP
+          name: tensorboard
         resources:
           limits:
-            nvidia.com/gpu: "1" # 根据实际情况调整GPU资源限制
-        securityContext:
-          privileged: true # 如果需要使用GPU，可能需要设置为true
+            cpu: "2"
+            memory: 4Gi
+          requests:
+            cpu: 100m
+            memory: 512Mi
 ```
+
+文件名：tensorflow-service-example.yaml
+
+文件位置：./run-example/tensorflow-service-example.yaml
+
+作用：用nodeport方式暴露服务端口，以便进行访问验证
+
+文件内容如下：
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: tensorflow-example-service
+spec:
+  type: NodePort
+  selector:
+    app: tensorflow-example
+  ports:
+  - name: ssh
+    protocol: TCP
+    port: 22
+    targetPort: 22
+    nodePort: 30004 # 端口根据主机端口使用情况进行指定
+  - name: jupyterlab
+    protocol: TCP
+    port: 8888
+    targetPort: 8888
+    nodePort: 30002 # 端口根据主机端口使用情况进行指定
+  - name: tensorboard
+    protocol: TCP
+    port: 6006
+    targetPort: 6006
+    nodePort: 30003 # 端口根据主机端口使用情况进行指定
+```
+
+部署完成后，根据上述yaml节点端口暴露情况，在浏览器输入节点ip:30002，节点ip:30003，验证jupyter-lab和tensorboard是否能访问。
 
 # 七、验证镜像功能
 
