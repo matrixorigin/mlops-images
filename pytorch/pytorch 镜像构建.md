@@ -378,6 +378,6 @@ Jupyterlab进入终端也显示提示信息：
 <img src=".\images\cuda.png">
 
 # 7 镜像目录说明
-1、登录容器默认进入目录：/root
-2、Jupyterlab工作目录：/root
+1、登录容器默认进入目录：/root    
+2、Jupyterlab工作目录：/root    
 3、TensorBoard日志目录：/root/tensorboard-logs
