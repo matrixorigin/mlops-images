@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tensorflow-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tensorflow-example
+  template:
+    metadata:
+      labels:
+        app: tensorflow-example
+    spec:
+      # 测试时根据实际情况使用节点亲和性
+      # affinity:
+      #   nodeAffinity:
+      #     requiredDuringSchedulingIgnoredDuringExecution:
+      #       nodeSelectorTerms:
+      #       - matchExpressions:
+      #         - key: kubernetes.io/hostname
+      #           operator: In
+      #           values:
+      #           - hostname
+      containers:
+      - image: tensorflow:2.15.0-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04
+        name: tensorflow-example
+        ports:
+        - containerPort: 22
+          protocol: TCP
+          name: ssh
+        - containerPort: 8888
+          protocol: TCP
+          name: jupyterlab
+        - containerPort: 6006
+          protocol: TCP
+          name: tensorboard
+        resources:
+          limits:
+            cpu: "2"
+            memory: 4Gi
+          requests:
+            cpu: 100m
+            memory: 512Mi
