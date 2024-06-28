@@ -378,7 +378,7 @@ tensorflow:2.15.0-python3.8-cuda12.1.0-cudnn8-devel-ubuntu22.04
 部署命令：
 
 ```shell
-kubectl apply -f your-deployment-example.yaml tensorflow-service-example.yaml
+kubectl apply -f your-deployment-example.yaml -f tensorflow-service-example.yaml
 ```
 
 文件名：tensorflow-deployment-example.yaml
