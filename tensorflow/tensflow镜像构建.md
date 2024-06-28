@@ -385,7 +385,7 @@ kubectl apply -f your-deployment-example.yaml -f tensorflow-service-example.yaml
 
 文件位置：./run-example/tensorflow-deployment-example.yaml
 
-作用：用tensorflow镜像在k8s集群中部署服务
+作用：部署deployment，用tensorflow镜像在k8s集群中部署服务
 
 文件内容如下：
 
@@ -440,7 +440,7 @@ spec:
 
 文件位置：./run-example/tensorflow-service-example.yaml
 
-作用：用nodeport方式暴露服务端口，以便进行访问验证
+作用：部署svc，用nodeport方式暴露服务端口，以便进行访问验证
 
 文件内容如下：
 
