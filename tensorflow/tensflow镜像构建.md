@@ -471,7 +471,7 @@ spec:
     nodePort: 30003 # 端口根据主机端口使用情况进行指定
 ```
 
-部署完成后，根据上述yaml节点端口暴露情况，在浏览器输入节点ip:30002，节点ip:30003，验证jupyter-lab和tensorboard是否能访问。
+部署完成后，根据上述yaml节点端口暴露情况，在浏览器输入节点ip:30002，节点ip:30003，验证jupyter-lab和tensorboard是否能访问，或终端输入 ssh root@host -p 30004 验证是否能通过ssh登入容器。
 
 # 七、验证镜像功能
 
