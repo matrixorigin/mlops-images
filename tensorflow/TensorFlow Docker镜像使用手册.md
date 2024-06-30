@@ -25,7 +25,7 @@
 
 ## 3.1. SSH登录
 
-要通过SSH登录到容器，请使用以下命令（请将host替换成您所使用的ip或域名）：
+要通过SSH登录到容器，请使用以下命令（请将端口2222替换成您所使用的端口，host替换成您所使用的ip或域名）：
 
 ```bash
 ssh -p 2222 root@host
@@ -74,7 +74,7 @@ Miniconda是一个轻量级的conda环境管理器，它允许您创建独立的
 3. 使用：登录后，您可以开始使用JupyterLab编写和运行Python代码，管理文件等。
 
 ## 3.4. TensorBoard使用
-1. 访问TensorBoard：在浏览器中输入`http://host:6006`即可访问TensorBoard，查看您的训练进度和结果（请将host替换成您所使用的ip或域名）。
+1. 访问TensorBoard：在浏览器中输入`http://host:6006`即可访问TensorBoard，查看您的训练进度和结果（请将端口6006替换成您所使用的端口，host替换成您所使用的ip或域名）。
 2. 镜像中tensorboard默认配置的日志地址是：/root/tensorboard-logs
 
 ## 3.5.TensorFlow使用简介
@@ -125,11 +125,11 @@ test_loss, test_acc = model.evaluate(x_test, y_test, verbose=2)
 print('\nTest accuracy:', test_acc)
 ```
 
-#### TensorFlow教程链接
+TensorFlow教程链接：
 
 - **官方文档**：[TensorFlow Documentation](https://www.tensorflow.org/guide)
 - **入门教程**：[Getting Started with TensorFlow](https://www.tensorflow.org/tutorials)
-- **Keras API**：[Keras Guide](https://www.tensorflow.org/api_docs/python/tf/keras)
+- Keras API：[Keras Guide](https://www.tensorflow.org/api_docs/python/tf/keras)
 
 # 四、安全与维护
 
