@@ -48,8 +48,7 @@ RUN apt-get update && apt-get install -y \
 
 # 设置ssh
 RUN mkdir /var/run/sshd
-RUN echo "root:111111" | chpasswd
-RUN echo -n "111111" | base64 > /tmp/.secretpw
+RUN echo "root:123456" | chpasswd
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config 
 
 # 设置ssh登入提示信息
@@ -288,6 +287,9 @@ autorestart=true
 redirect_stderr=true
 
 EOF
+
+# 配置ssh密码
+[ -f /sync/root-passwd ] && cat /sync/root-passwd | chpasswd && rm /sync/root-passwd
 
 
 # 启动supervisord
