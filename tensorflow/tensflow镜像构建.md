@@ -4,7 +4,7 @@
 
 # 一、目标
 
-​	本文档旨在说明tensorflow镜像构建过程。目标tensorflow镜像的要求是：支持ssh登录、root密码、中文支持、中国CST时区、支持moniconda、支持python3.8、支持Jupyterlab、支持tensorboard。
+​	本文档旨在说明tensorflow镜像构建过程。目标tensorflow镜像的要求是：支持ssh登录、root密码、中文支持、中国CST时区、支持moniconda、支持python3.10、支持Jupyterlab、支持tensorboard。
 对于tensorflow不同版本来说，此构建过程是通用的。只要将构建镜像脚本中传入的基础镜像、各个版本参数改成自己需要的，即可按需构建不同版本的，支持GPU的或者仅支持CPU的镜像。具体参数详见“构建镜像”章节。
 
 # 二、前提
@@ -89,7 +89,6 @@ RUN conda install -y python=${PYTHON_VERSION}  && \
 # conda/pip增加国内源
 RUN conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/ && \
     conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/ && \
-    conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/ && \
     conda config --set show_channel_urls yes && \
     pip config set global.index-url http://mirrors.aliyun.com/pypi/simple/ && \
     pip config set global.trusted-host mirrors.aliyun.com
@@ -365,12 +364,12 @@ docker-run.sh文件内容如下:
 # 运行tensorflow容器，映射ssh 22端口为2222，jupyter端口为8888，tensorboard端口为6006
 docker run  -d  -ti \
 --restart=always \
---name pytorch-test \
+--name tensorflow-test \
 --gpus all --ipc=host \
 -p 2220:22 \
 -p 8880:8888 \
 -p 6007:6006 \
-tensorflow:2.15.0-python3.8-cuda12.1.0-cudnn8-devel-ubuntu22.04
+tensorflow:2.15.0-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04
 ```
 
 ## 6.2. 方式二：如果是k8s集群，可以通过deployment部署容器
