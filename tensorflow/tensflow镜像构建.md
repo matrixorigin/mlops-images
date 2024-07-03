@@ -628,15 +628,15 @@ python3 -c "import tensorflow as tf; print(tf.reduce_sum(tf.random.normal([1000,
 
 # 八、构建好的新镜像
 
-| 镜像名     | tag                                                   | 镜像id       | 备注                                                         |
-| ---------- | ----------------------------------------------------- | ------------ | ------------------------------------------------------------ |
-| tensorflow | 2.15.0-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04 | 676d6aebe1cf | 1.     镜像tag中体现了Tensorflow、cuda、cudnn、python、ubuntu等版本信息<br>2.     安装常用包如vim、curl等<br>3.     增加root用户ssh登录，临时密码为111111<br/>4.     修改时区为中国标准时间<br/>5.     安装中文支持并生成中文locale<br/>6.     安装python库pandas、seaborn<br/>7.     增加ssh登入提示信息 |
+| 镜像名     | tag                                                   | 镜像id       | 镜像大小 | 备注                                                         |
+| ---------- | ----------------------------------------------------- | :----------- | -------- | ------------------------------------------------------------ |
+| tensorflow | 2.15.0-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04 | 659281294a52 | 12.5G    | 1.     镜像tag中体现了Tensorflow、cuda、cudnn、python、ubuntu等版本信息<br>2.     安装常用包如vim、curl等<br>3.     增加root用户ssh登录，临时密码为111111<br/>4.     修改时区为中国标准时间<br/>5.     安装中文支持并生成中文locale<br/>6.     安装python库pandas、seaborn<br/>7.     增加ssh登入提示信息 |
 
 # 九、镜像目录说明
 
-1. 登入容器目录：/root
-2. jupyter工作目录：/root
-3. TensorBoard日志目录：/root/tensorboard-logs
+1. 登入容器目录：/root，ssh  root用户默认密码：123456
+2. jupyter工作目录：/root，访问根路径：/jupyter
+3. TensorBoard日志目录：/root/tensorboard-logs，访问根路径：/monitor
 
 # 十、扩展说明
 
