@@ -1,5 +1,5 @@
-本文档旨在说明pytorch镜像构建过程。目标pytorch镜像的要求是：支持ssh登录、root密码、中文支持、中国CST时区，内置miniconda、python3.8、Jupyterlab、TensorBoard。
-对于pytorch不同版本来说，此构建过程是通用的，只需将构建镜像脚本中传入的基础镜像、各个版本参数改成自己需要的，即可按需构建不同版本的，支持GPU的或者仅支持CPU的镜像。具体参数详见“构建镜像”章节。
+本文档旨在说明miniconda镜像构建过程。目标miniconda镜像的要求是：支持ssh登录、root密码、中文支持、中国CST时区，内置Jupyterlab、TensorBoard。
+对于miniconda不同conda、python版本来说，此构建过程是通用的，只需将构建镜像脚本中传入的基础镜像、各个版本参数改成自己需要的即可。
 
 # 1 前置条件
 已安装docker，docker  version v19.03+
@@ -66,36 +66,6 @@ RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
 
 #启动服务
 CMD ["bash", "/init/boot/boot.sh"]
-
-# 阶段3：安装深度学习框架pytorch
-ARG PYTORCH_VERSION
-ARG PYTORCH_VERSION_SUFFIX
-ARG TORCHVISION_VERSION
-ARG TORCHVISION_VERSION_SUFFIX
-ARG TORCHAUDIO_VERSION
-ARG TORCHAUDIO_VERSION_SUFFIX
-ARG PYTORCH_DOWNLOAD_URL
-
-RUN if [ ! $TORCHAUDIO_VERSION ]; \
-    then \
-        TORCHAUDIO=; \
-    else \
-        TORCHAUDIO=torchaudio==${TORCHAUDIO_VERSION}${TORCHAUDIO_VERSION_SUFFIX}; \
-    fi && \
-    if [ ! $PYTORCH_DOWNLOAD_URL ]; \
-    then \
-        pip install \
-            torch==${PYTORCH_VERSION}${PYTORCH_VERSION_SUFFIX} \
-            torchvision==${TORCHVISION_VERSION}${TORCHVISION_VERSION_SUFFIX} \
-            ${TORCHAUDIO}; \
-    else \
-        pip install \
-            torch==${PYTORCH_VERSION}${PYTORCH_VERSION_SUFFIX} \
-            torchvision==${TORCHVISION_VERSION}${TORCHVISION_VERSION_SUFFIX} \
-            ${TORCHAUDIO} \
-            --index-url ${PYTORCH_DOWNLOAD_URL}; \
-    fi && \
-    rm -r /root/.cache/pip
 ```
 
 # 3 Dockerfile中引用的文件
@@ -361,11 +331,7 @@ stdout_logfile=/tmp/tensorboard.out.log
 ```
 
 # 4 构建镜像
-build-scripts.sh文件与Dockerfile放在同级目录下。此文件定义镜像构建过程，按需修改版本参数。构建出的镜像名称示例：pytorch:2.3.0-python3.8-cuda12.1.0-cudnn8-devel-ubuntu22.04
-
-注意：在给版本参数赋值时，参考对应pytorch版本pip安装命令（https://pytorch.org/get-started/previous-versions/）
-!<img src=".\pictures\pytorch_install.png">
-    
+build-scripts.sh文件与Dockerfile放在同级目录下。此文件定义镜像构建过程，按需修改版本参数。    
 build-scripts.sh内容如下：
 
 ```shell
@@ -377,35 +343,18 @@ build-scripts.sh内容如下：
 
 BASE_IMAGE=nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
 
-PYTHON_VERSION=3.8
-# miniconda的安装包均放在：https://repo.anaconda.com/miniconda/。根据要安装的python版本、操作系统，选择对应的miniconda安装包。
-MINICONDA_PKG=Miniconda3-py38_23.11.0-2-Linux-x86_64.sh
-
-#根据官方对应pytorch pip安装命令中指定https://pytorch.org/get-started/previous-versions/，国外源地址下载较慢，有需要的话可以考虑换成国内源，但是有些国内源不全，不一定有对应版本
-# PYTORCH参数
-PYTORCH_VERSION=2.3.0
-PYTORCH_VERSION_SUFFIX=
-TORCHVISION_VERSION=0.18.0
-TORCHVISION_VERSION_SUFFIX=
-TORCHAUDIO_VERSION=2.3.0
-TORCHAUDIO_VERSION_SUFFIX=
-PYTORCH_DOWNLOAD_URL=https://download.pytorch.org/whl/cu121
+PYTHON_VERSION=3.10
+MINICONDA_VERSION=3
+# miniconda的安装包均放在：https://repo.anaconda.com/miniconda/。根据要安装的miniconda版本、python版本、操作系统，选择对应的miniconda安装包。
+MINICONDA_PKG=Miniconda3-py310_24.5.0-0-Linux-x86_64.sh
 
 # 构建后的镜像tag，需要体现pytorch、python、基础镜像版本信息
-IMAGE_TAG=${PYTORCH_VERSION}-python${PYTHON_VERSION}-cuda12.1.0-cudnn8-devel-ubuntu22.04
+IMAGE_TAG=conda${MINICONDA_VERSION}-python${PYTHON_VERSION}-cuda12.1.0-cudnn8-devel-ubuntu22.04
 
 docker build \
     --build-arg BASE_IMAGE=${BASE_IMAGE} \
-    --build-arg PYTHON_VERSION=${PYTHON_VERSION} \
     --build-arg MINICONDA_PKG=${MINICONDA_PKG} \
-    --build-arg PYTORCH_VERSION=${PYTORCH_VERSION} \
-    --build-arg PYTORCH_VERSION_SUFFIX=${PYTORCH_VERSION_SUFFIX} \
-    --build-arg TORCHVISION_VERSION=${TORCHVISION_VERSION} \
-    --build-arg TORCHVISION_VERSION_SUFFIX=${TORCHVISION_VERSION_SUFFIX} \
-    --build-arg TORCHAUDIO_VERSION=${TORCHAUDIO_VERSION} \
-    --build-arg TORCHAUDIO_VERSION_SUFFIX=${TORCHAUDIO_VERSION_SUFFIX} \
-    --build-arg PYTORCH_DOWNLOAD_URL=${PYTORCH_DOWNLOAD_URL} \
-    -t pytorch:${IMAGE_TAG}\
+    -t miniconda:${IMAGE_TAG}\
     -f ./Dockerfile \
     .
 ```
@@ -427,32 +376,29 @@ docker-run.sh文件内容如下:
 # 运行pytorch容器，映射ssh 22端口为2222，jupyter端口为8888，tensorboard端口为6006
 docker run  -d  -ti \
 --restart=always \
---name pytorch-test \
---gpus all --ipc=host \
+--name miniconda-test \
+--gpus all \
 -p 2222:22 \
 -p 8888:8888 \
 -p 6006:6006 \
-pytorch:2.3.0-python3.8-cuda12.1.0-cudnn8-devel-ubuntu22.04
+miniconda:conda3-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04
 ```
 
 # 6 验证镜像功能
 ## 6.1 支持SSH登录成功，登录后有友好提示
-<img src=".\pictures\SSH.png">
+<img src=".\pictures\ssh.png">
 
 ## 6.2 支持中文，中文不乱码
-<img src=".\pictures\Chinese.png">
+<img src=".\pictures\language.png">
 
 ## 6.3 中国标准时间CST
 <img src=".\pictures\timezone.png">
 
 ## 6.4 支持Jupyterlab
-<img src=".\pictures\jupyterlab-1.png">
+<img src=".\pictures\jupyterlab.png">
 
 ## 6.5 支持Tensorboard
-<img src=".\pictures\tensorboard-1.png">
-
-## 6.6 查看安装的pytorch、cuda、cudnn等版本
-<img src=".\pictures\cuda.png">
+<img src=".\pictures\tensorboard.png">
 
 # 7 镜像目录路径说明
 1、登录容器默认进入目录：/root，ssh  root用户默认密码：123456       
