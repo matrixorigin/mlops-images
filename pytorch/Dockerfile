@@ -6,11 +6,7 @@ FROM ${BASE_IMAGE}
 # 设置工作目录
 WORKDIR /root 
 
-ENV SHELL=/bin/bash
-ENV USER=root
-ENV MOTD_SHOWN=pam
-
-RUN apt-get update && DEBIAN_FRONTEND=noninteracti apt-get install -y --no-install-recommends openssh-server locales tzdata curl vim tmux wget  && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && DEBIAN_FRONTEND=noninteracti apt-get install -y openssh-server locales tzdata curl vim supervisor && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 设置时区为 Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -20,40 +16,59 @@ ENV TZ=Asia/Shanghai
 RUN locale-gen zh_CN.UTF-8 && update-locale LANG=zh_CN.UTF-8
 ENV LANG=zh_CN.UTF-8
 
-# SSH支持，SSH登录提示信息放在/etc/matrixdc-motd
+# SSH支持
 RUN mkdir /var/run/sshd && \
     echo "root:123456" | chpasswd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
-    echo "source /etc/profile" >> /root/.bashrc && \
-    echo "source /etc/matrixdc-motd" >> /root/.bashrc
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+
+# SSH登录后提示信息
+COPY matrixdc-motd /etc/matrixdc-motd
+RUN echo "source /etc/profile" >> /root/.bashrc && echo "source /etc/matrixdc-motd" >> /root/.bashrc
 
 # 暴露 SSH 端口
 EXPOSE 22
 
-# 阶段2：安装miniconda3(已内置指定python)、jupyterlab、tensorboard
+ENV SHELL=/bin/bash
+ENV USER=root
+ENV MOTD_SHOWN=pam
+
+# 阶段2：安装miniconda3、python、jupyterlab、tensorboard
+
 # 下载并安装 Miniconda，安装路径 /root/miniconda3
-ARG MINICONDA_PKG
 ENV PATH=/root/miniconda3/bin:$PATH
-RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/${MINICONDA_PKG} && \
+RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     bash /tmp/miniconda.sh -b -p /root/miniconda3 && \
     rm /tmp/miniconda.sh && \
     echo "PATH=$PATH" >> /etc/profile
 
+# 通过conda安装python
+ARG PYTHON_VERSION
+RUN conda install -y python=${PYTHON_VERSION}  && \
+    conda clean -ya && \
+    echo "export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> /etc/profile
     
-# pip安装jupyterLab、tensorboard，tensorboard依赖的numpy版本需要小于2.0
-RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard && \
+# conda/pip增加国内源
+RUN conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/ && \
+    conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/ && \
+    conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/ && \
+    conda config --set show_channel_urls yes && \
+    pip config set global.index-url http://mirrors.aliyun.com/pypi/simple/ && \
+    pip config set global.trusted-host mirrors.aliyun.com
+
+# pip安装jupyterLab、tensorboard
+RUN pip install jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard && \
     rm -r /root/.cache/pip
 
 # 暴露 JupyterLab、TensorBoard的端口
 EXPOSE 8888 6006
 
 # 创建目录
-RUN mkdir -p /init/
+RUN mkdir -p /init/boot
 
-# 拷贝启动涉及到的文件
-COPY ./init/ /init/
-RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
+# 拷贝启动脚本
+COPY boot.sh /init/boot/boot.sh
+RUN chmod +x /init/boot/boot.sh
 
 #启动服务
 CMD ["bash", "/init/boot/boot.sh"]

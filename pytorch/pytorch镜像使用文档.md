@@ -1,5 +1,5 @@
 本文档旨在说明pytorch镜像运行起来后，如何操作使用。
-pytorch镜像内置了SSH登录、miniconda、Jupyterlab、TensorBoard。这里主要介绍这些内置工具的操作使用。
+pytorch镜像内置了SSH登录、miniconda、python、Jupyterlab、tensorboard。这里主要介绍这些内置工具的操作使用。
 # 1、镜像运行
 一般有2种镜像运行方式，一是直接通过docker运行，二是在k8s上运行deploy。
 具体运行示例可参考：https://github.com/matrix-dc/mlops-images/tree/main/pytorch/run-example
@@ -15,7 +15,7 @@ ssh -p port root@ip
 这里的ip、port需要替换成实际的。
 
 # 3、miniconda 使用
-pytorch镜像内置了miniconda（miniconda已包含python），安装路径为/root/miniconda3/。   
+pytorch镜像内置了miniconda，安装路径为/root/miniconda3/。   
 conda常用命令：
 ```
 # 创建虚拟环境
@@ -30,7 +30,11 @@ conda install {xxx}={version}    #这里的{xxx}、{version}指的软件名及�
 ....
 ```
 
-# 4、Jupyterlab 使用
+# 4、python 使用
+pytorch镜像内置了python，此python是conda安装的。   
+python具体使用，参考python官方文档：https://docs.python.org/3/
+
+# 5、Jupyterlab 使用
 JupyterLab是一个交互式的开发环境，是Jupyter Notebook的下一代产品，可以使用它编写Notebook、操作终端、编辑MarkDown文本、打开交互模式、查看csv文件及图片等功能。
 
 pytorch镜像内置了Jupyterlab，其根访问路径是/jupyter。 jupyterlab进入的默认目录是/root。    
@@ -40,14 +44,14 @@ pytorch镜像内置了Jupyterlab，其根访问路径是/jupyter。 jupyterlab�
 jupyterlab默认目录是/root。  
 
 首次访问jupyterlab，需要按照访问页面的指引，获得token设置密码。
-<img src='.\pictures\jupyterlab使用-1.png'>
+<img src='./images/jupyterlab使用-1.png'>
 使用jupyterlab:   
-<img src='.\pictures\jupyterlab-1.png'>
+<img src='./images/jupyterlab-1.png'>
 
 # 6、TensorBoard 使用
-pytorch镜像内置了TensorBoard，TensorBoard可对训练结果进行可视化展示。可以使用torch.utils.tensorboard.SummaryWriter来记录训练过程中的信息，训练过程中的信息需要放到tensorboard的logdir目录。   
+pytorch镜像内置了tensorboard，tensorboard可对训练结果进行可视化展示。可以使用torch.utils.tensorboard.SummaryWriter来记录训练过程中的信息，训练过程中的信息需要放到tensorboard的logdir目录。   
 
-pytorch镜像内置了TensorBoard，其根访问路径是/monitor，logdir目录是/root/tensorboard-logs
+pytorch镜像内置了tensorboard，其根访问路径是/monitor，logdir目录是/root/tensorboard-logs
  
 用浏览器打开tensorboard访问方式：http://ip:port/monitor。    
 这里的ip、port需要替换成实际的。 
