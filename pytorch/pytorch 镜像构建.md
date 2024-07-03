@@ -418,7 +418,7 @@ sh build-scripts.sh
 ```
 
 # 5 运行容器
-运行容器脚本参考run-examplem目录下的docker-run.sh（docker直接启动）、k8s-run-deployment（k8s启动的deployment）。
+运行容器脚本参考run-example目录下的docker-run.sh（docker直接启动）、k8s-run-deployment.yaml（k8s启动的deployment）。
 docker-run.sh文件内容如下:
 
 ```shell
@@ -454,7 +454,7 @@ pytorch:2.3.0-python3.8-cuda12.1.0-cudnn8-devel-ubuntu22.04
 ## 6.6 查看安装的pytorch、cuda、cudnn等版本
 <img src=".\pictures\cuda.png">
 
-# 7 镜像目录说明
-1、登录容器默认进入目录：/root    
-2、Jupyterlab工作目录：/root    
-3、TensorBoard日志目录：/root/tensorboard-logs
+# 7 镜像目录路径说明
+1、登录容器默认进入目录：/root，ssh  root用户默认密码：123456       
+2、Jupyterlab工作目录：/root，访问根路径：/jupyter     
+3、TensorBoard日志目录：/root/tensorboard-logs，访问根路径：/monitor   
