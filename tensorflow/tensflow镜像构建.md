@@ -36,28 +36,22 @@ FROM ${BASE_IMAGE}
 # 设置工作目录
 WORKDIR /root
 
+# 设置必要环境变量
+ENV SHELL=/bin/bash
+ENV USER=root
+ENV MOTD_SHOWN=pam
+
 # 安装必要的工具
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-server \
     curl \
     vim \
+    tmux \
+    wget \
     locales \
-    supervisor \
     tzdata && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# 设置ssh
-RUN mkdir /var/run/sshd
-RUN echo "root:123456" | chpasswd
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config 
-
-# 设置ssh登入提示信息
-COPY matrixdc-motd /etc/matrixdc-motd
-RUN echo 'source /etc/matrixdc-motd' >> /etc/bash.bashrc
-
-# 暴露 SSH 端口
-EXPOSE 22
-
+    
 # 设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone
@@ -66,50 +60,39 @@ RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
 RUN locale-gen zh_CN.UTF-8
 RUN echo 'export LANG=zh_CN.UTF-8' >> /root/.bashrc
 
-# 设置必要环境变量
-ENV SHELL=/bin/bash
-ENV USER=root
-ENV MOTD_SHOWN=pam
+# SSH支持，SSH登录提示信息放在/etc/matrixdc-motd
+RUN mkdir /var/run/sshd && \
+    echo "root:123456" | chpasswd && \
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "source /etc/profile" >> /root/.bashrc && \
+    echo "source /etc/matrixdc-motd" >> /root/.bashrc
+    
+# 暴露 SSH 端口
+EXPOSE 22
 
-# 阶段2：安装miniconda3、python、jupyterlab、tensorboard
+# 阶段2：安装miniconda3(已内置指定python)、jupyterlab、tensorboard
 # 下载并安装 Miniconda，安装路径 /root/miniconda3
+ARG MINICONDA_PKG
 ENV PATH=/root/miniconda3/bin:$PATH
-RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/${MINICONDA_PKG} && \
     bash /tmp/miniconda.sh -b -p /root/miniconda3 && \
     rm /tmp/miniconda.sh && \
     echo "PATH=$PATH" >> /etc/profile
 
-# 通过conda安装一个python
-ARG PYTHON_VERSION
-RUN conda install -y python=${PYTHON_VERSION}  && \
-    conda clean -ya && \
-    echo "export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt" >> /etc/profile
-
-# conda/pip增加国内源
-RUN conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/ && \
-    conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/ && \
-    conda config --set show_channel_urls yes && \
-    pip config set global.index-url http://mirrors.aliyun.com/pypi/simple/ && \
-    pip config set global.trusted-host mirrors.aliyun.com
-
-# 安装Python库
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir \
-    jupyterlab \
-    jupyterlab-language-pack-zh-CN \
-    jupyterlab_pygments \
-    tensorboard \
-    && rm -r /root/.cache/pip
+# pip安装jupyterLab、tensorboard，tensorboard依赖的numpy版本需要小于2.0
+RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard && \
+    rm -r /root/.cache/pip
     
 # 暴露 JupyterLab、TensorBoard的端口
 EXPOSE 8888 6006
 
 # 创建目录
-RUN mkdir -p /init/boot
+RUN mkdir -p /init/
 
-# 拷贝启动脚本
-COPY boot.sh /init/boot/boot.sh
-RUN chmod +x /init/boot/boot.sh
+# 拷贝启动涉及到的文件
+COPY ./init/ /init/
+RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
 
 #启动服务
 CMD ["bash", "/init/boot/boot.sh"]
@@ -125,39 +108,86 @@ RUN pip install ${TENSORFLOW_TYPE}==${TENSORFLOW_VERSION}
 
 # 四、Dockerfile中引用的文件
 
-Dockerfile中涉及到2个其他文件：分别是：
+​	Dockerfile中引用了./init/文件夹下，/init文件夹与Dockerfile放在同级目录下。 文件夹目录结构如下：
 
-<pre>
-matrixdc-motd     ：SSH登录后提示信息。   
-boot.sh           ：Dockerfile CMD启动文件
-</pre>
+```
+./init/
+├── bin
+│   └── supervisord   #supervisor二进制bin文件，静态文件
+├── boot
+│   └── boot.sh       # CMD启动脚本，静态文件
+├── jupyter
+│   └── jupyter_config.py # Jupyterlab配置文件，静态文件
+└── supervisor
+    └── supervisor.ini    # supervisor配置文件，静态文件
+```
 
-## 4.1. matrixdc-motd：
+## 4.1 ./init/bin/supervisord
 
-​	位置：与Dockerfile同级目录
+./init/bin/supervisord是个bin文件，在boot.sh中用此supervisord启动服务。
 
-​	作用：用于ssh登入后显示的提示信息
+## 4.2. ./init/boot/boot.sh
+
+​	./init/boot/boot.sh是CMD启动脚本，此脚本中通过curl的方式获取在线文件init.py，init.py中存放的是后续可能有变	化的内容，这样组织的好处是：init.py文件内容有变化时无需重新Build镜像。
+
+​	boot.sh文件内容：
 
 ```shell
 #!/bin/bash
-# 打印的文字颜色
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-default='\033[0m'
-printf "+----------------------------------------------------------------------------------------------------------------+
-"
-printf "${GREEN}目录说明:${default}
-"
-printf "╔═════════════════╦════════╦════╦═════════════════════════════════════════════════════════════════════════╗
-"
-printf "║目录             ║名称    ║速度║说明                                                                     ║
-"
-printf "╠═════════════════╬════════╬════╬═════════════════════════════════════════════════════════════════════════╣
-"
-printf "║/                ║系 统 盘║一般║实例关机数据不会丢失，可存放代码等。会随保存镜像一起保存。               ║
-"
-printf "╚═════════════════╩════════╩════╩═════════════════════════════════════════════════════════════════════════╝
-"
+echo "init begin, source /etc/profile"
+
+source /etc/profile || true
+echo $PATH
+
+# 设置SSH登录密码
+[ -f /sync/root-passwd ] && cat /sync/root-passwd | chpasswd && rm /sync/root-passwd
+echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+mkdir -p /run/sshd || true
+echo "passwd set finished"
+
+# 拷贝supervisor 等bin文件
+cp -fv /init/bin/* /bin/
+ls -alh /init/bin/
+ls -alh /bin/ | grep -E "super"
+echo "bin file set finished"
+
+
+rm -rf /tmp/gpuhub && mkdir /tmp/gpuhub
+curl --connect-timeout 5 -o /tmp/gpuhub/init.py https://sharefile.43.143.130.168.nip.io:30443/file/init.py -k || true
+
+echo "download init script finished"
+
+mkdir -p /root/tensorboard-logs
+
+
+python /tmp/gpuhub/init.py || true
+rm -rf /tmp/gpuhub
+echo "run init script finished"
+
+
+echo "pre cmd finished"
+
+echo "supervisord begin"
+/bin/supervisord -c /init/supervisor/supervisor.ini
+```
+
+​	[https://sharefile.43.143.130.168.nip.io:30443/file/init.py](https://sharefile.43.143.130.168.nip.io:30443/file/init.py文件内容：) 文件内容：
+
+```python
+# -*- coding: utf-8 -*-
+import os
+import logging
+import requests
+
+motd_doc_v1 = '''#!/bin/bash
+
+printf "+----------------------------------------------------------------------------------------------------------------+\n"
+printf "\033[32m目录说明:\033[0m\n"
+printf "╔═════════════════╦════════╦════╦═════════════════════════════════════════════════════════════════════════╗\n"
+printf "║目录             ║名称    ║速度║说明                                                                     ║\n"
+printf "╠═════════════════╬════════╬════╬═════════════════════════════════════════════════════════════════════════╣\n"
+printf "║/                ║系 统 盘║一般║实例关机数据不会丢失，可存放代码等。会随保存镜像一起保存。               ║\n"
+printf "╚═════════════════╩════════╩════╩═════════════════════════════════════════════════════════════════════════╝\n"
 
 if test -f "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"; then
   cfs_quota_us=$(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us)
@@ -167,73 +197,131 @@ if test -f "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"; then
   else
       cores=0.$((cfs_quota_us * 10 / cfs_period_us))
   fi
-  printf "${GREEN}CPU${default} ：%s 核
-" ${cores}
+  printf "\033[32mCPU\033[0m ：%s 核心\n" ${cores}
 
   limit_in_bytes=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)
   memory="$((limit_in_bytes / 1024 / 1024 / 1024)) GB"
-  printf "${GREEN}内存${default}：%s
-" "${memory}"
+  printf "\033[32m内存\033[0m：%s\n" "${memory}"
 else
   cores=$(cat /sys/fs/cgroup/cpu.max | awk '{print $1/$2}')
-  printf "${GREEN}CPU${default} ：%s 核
-" ${cores}
+  printf "\033[32mCPU\033[0m ：%s 核心\n" ${cores}
 
   limit_in_bytes=$(cat /sys/fs/cgroup/memory.max)
   memory="$((limit_in_bytes / 1024 / 1024 / 1024)) GB"
-  printf "${GREEN}内存${default}：%s
-" "${memory}"
+  printf "\033[32m内存\033[0m：%s\n" "${memory}"
 fi
 
 if type nvidia-smi >/dev/null 2>&1; then
   gpu=$(nvidia-smi -i 0 --query-gpu=name,count --format=csv,noheader)
-  printf "${GREEN}GPU${default} ：%s
-" "${gpu}"
+  printf "\033[32mGPU \033[0m：%s\n" "${gpu}"
 fi
 
 df_stats=`df -ah`
-printf "${GREEN}存储${default}：
-"
+printf "\033[32m存储\033[0m：\n"
 disk=$(echo "$df_stats" | grep "/$" | awk '{print $5" "$3"/"$2}')
-printf "  ${GREEN}/${default}               ：%s
-" "${disk}"
+printf "\033[32m  系 统 盘/               \033[0m：%s\n" "${disk}"
 
 
-printf "+----------------------------------------------------------------------------------------------------------------+
-"
-printf "${RED}*注意: 
-"
-printf "${RED}1.清理系统盘请参考文档${default}
-"
+printf "+----------------------------------------------------------------------------------------------------------------+\n"
 
 alias sudo=""
+'''
 
+
+def try_catch(func):
+    def fn():
+        try:
+            func()
+        except Exception as e:
+            logging.exception("Exception happened. detail: {}".format(e))
+
+    return fn
+
+
+@try_catch
+def init_jupyter():
+    terminal_setting_path = "/root/.jupyter/lab/user-settings/@jupyterlab/terminal-extension"
+    lang_setting_path = "/root/.jupyter/lab/user-settings/@jupyterlab/translation-extension"
+    if not os.path.exists(terminal_setting_path):
+        os.makedirs(terminal_setting_path)
+    if not os.path.exists(lang_setting_path):
+        os.makedirs(lang_setting_path)
+    with open(os.path.join(terminal_setting_path, "plugin.jupyterlab-settings"), "w") as fo:
+        fo.write('''{"theme": "dark"}
+        ''')
+    with open(os.path.join(lang_setting_path, "plugin.jupyterlab-settings"), "w") as fo:
+        fo.write('''{"locale": "zh_CN"}
+        ''')
+    with open("/init/jupyter/jupyter_config.py", "a") as fo:
+        fo.write("\nc.NotebookApp.allow_remote_access = True\n")
+        fo.write("c.NotebookApp.iopub_data_rate_limit = 1000000.0\n")
+        fo.write("c.NotebookApp.rate_limit_window = 3.0\n")
+
+
+@try_catch
+def init_motd():
+    # if not os.path.exists("/etc/matrixdc-motd"):
+    with open("/etc/matrixdc-motd", "w") as fo:
+        fo.write(motd_doc_v1)
+
+
+@try_catch
+def init_shutdown():
+    if os.path.exists("/usr/sbin/shutdown"):
+        os.remove("/usr/sbin/shutdown")
+    with open("/usr/bin/shutdown", "w") as fo:
+        fo.write('rm -rf /root/.local/share/Trash \n')
+        fo.write('ps -ef | grep supervisord | grep -v grep | awk \'{print $2}\' | xargs kill \n')
+    os.chmod("/usr/bin/shutdown", 0o755)
+
+
+@try_catch
+def init_conda_source():
+    with open("/root/.condarc", "w") as fo:
+        fo.write('''
+channels:
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/
+  - defaults
+show_channel_urls: true
+        ''')
+
+
+@try_catch
+def init_pip_source():
+    with open("/etc/pip.conf", "w") as fo:
+        fo.write('''
+[global]
+trusted-host = mirrors.aliyun.com
+index-url = http://mirrors.aliyun.com/pypi/simple
+        ''')
+
+
+if __name__ == '__main__':
+    flag_file = "/etc/matrixdc-init"
+    if not os.path.exists(flag_file):
+        try:
+            init_jupyter()
+            init_motd()
+            init_shutdown()
+            init_conda_source()
+            init_pip_source()
+            with open(flag_file, 'w') as fo:
+                pass
+        except Exception as e:
+            logging.exception("Exception happened. detail: {}".format(e))
+    else:
+        print("Ignore...")
 ```
 
-## 4.2. boot.sh：
+## 4.3 ./init/jupyter/jupyter_config.py
 
-​	位置：与Dockerfile同级目录
+​	jupyter_config.py是Jupyterlab的配置文件。 jupyter_config.py文件内容如下：
 
-​	作用：定义要启动的服务，并用supervisor管理服务进程
-
-```shell
-#!/bin/bash
-
-# 创建/init/jupyter，用来存放jupyterlab的配置文件
-mkdir -p /init/jupyter
-
-# 创建/init/supervisor，用来存放supervisor.ini文件
-mkdir -p /init/supervisor
-
-# 创建/root/tensorboard-logs，用来存放tensorboard日志
-mkdir -p /root/tensorboard-logs
-
-# 创建/init/jupyter/jupyter_config.py配置文件
-cat > /init/jupyter/jupyter_config.py <<EOF
+```python
 c.ServerApp.ip = '0.0.0.0'
 c.ServerApp.port = 8888
-# jupyter token设置
-# c.ServerApp.token = ""
 c.NotebookApp.open_browser = False
 
 # 0.5.1版本前创建的容器还使用/ 作为root dir
@@ -253,12 +341,13 @@ c.NotebookApp.allow_origin='*'
 c.ServerApp.allow_remote_access = True
 c.ServerApp.base_url='/jupyter/'
 c.ServerApp.allow_origin='*'
+```
 
-EOF
+## 4.4 ./init/supervisor/supervisor.ini
 
+​	supervisor.ini是supervisor配置文件，定义了启动哪些服务。
 
-# 创建/init/supervisor/supervisor.ini文件
-cat > /init/supervisor/supervisor.ini <<EOF
+```
 [supervisord]
 nodaemon=true
 logfile=/tmp/supervisord.log
@@ -266,34 +355,27 @@ pidfile=/tmp/supervisord.pid
 
 
 [program:sshd]
-command=/usr/sbin/sshd
-directory=/root
+command=/usr/sbin/sshd -D
 autostart=true
 autorestart=true
-redirect_stderr=true
+stderr_logfile=/tmp/sshd.err.log
+stdout_logfile=/tmp/sshd.out.log
 
 [program:jupyterlab]
-command=jupyter-lab --allow-root --config=/init/jupyter/jupyter_config.py
+command=/root/miniconda3/bin/jupyter-lab --allow-root --config=/init/jupyter/jupyter_config.py
 directory=/root
 autostart=true
 autorestart=true
-redirect_stderr=true
+stderr_logfile=/tmp/jupyterlab.err.log
+stdout_logfile=/tmp/jupyterlab.out.log
 
 [program:tensorboard]
-command=tensorboard --host 0.0.0.0 --port 6006 --logdir /root/tensorboard-logs
+command=/root/miniconda3/bin/tensorboard --host 0.0.0.0 --port 6006 --logdir /root/tensorboard-logs --path_prefix /monitor
 directory=/root
 autostart=true
 autorestart=true
-redirect_stderr=true
-
-EOF
-
-# 配置ssh密码
-[ -f /sync/root-passwd ] && cat /sync/root-passwd | chpasswd && rm /sync/root-passwd
-
-
-# 启动supervisord
-supervisord -c /init/supervisor/supervisor.ini
+stderr_logfile=/tmp/tensorboard.err.log
+stdout_logfile=/tmp/tensorboard.out.log
 ```
 
 # 五、构建镜像：
@@ -327,6 +409,9 @@ build-scripts.sh内容如下：
 BASE_IMAGE=nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
 
 PYTHON_VERSION=3.10
+# miniconda的安装包均放在：https://repo.anaconda.com/miniconda/。根据要安装的python版本、操作系统，选择对应的miniconda安装包。
+MINICONDA_PKG=Miniconda3-py310_24.5.0-0-Linux-x86_64.sh
+
 # 从 TensorFlow 2.1 开始，pip 包 tensorflow 即同时包含 GPU 支持，无需通过特定的 pip 包 tensorflow-gpu 安装 GPU 版本。
 # 如果安装tensorflow-gpu:1.x版本,则TENSORFLOW_TYPE设为tensorflow-gpu，TENSORFLOW_VERSION设为1.x
 TENSORFLOW_TYPE=tensorflow
@@ -339,6 +424,7 @@ IMAGE_TAG=${TENSORFLOW_VERSION}-python${PYTHON_VERSION}-cuda12.1.0-cudnn8-devel-
 docker build \
     --build-arg BASE_IMAGE=${BASE_IMAGE} \
     --build-arg PYTHON_VERSION=${PYTHON_VERSION} \
+    --build-arg MINICONDA_PKG=${MINICONDA_PKG} \
     --build-arg TENSORFLOW_TYPE=${TENSORFLOW_TYPE} \
     --build-arg TENSORFLOW_VERSION=${TENSORFLOW_VERSION} \
     -t tensorflow:${IMAGE_TAG} \
@@ -368,9 +454,9 @@ docker run  -d  -ti \
 --restart=always \
 --name tensorflow-test \
 --gpus all --ipc=host \
--p 2220:22 \
--p 8880:8888 \
--p 6007:6006 \
+-p 2222:22 \
+-p 8888:8888 \
+-p 6006:6006 \
 tensorflow:2.15.0-python3.10-cuda12.1.0-cudnn8-devel-ubuntu22.04
 ```
 
