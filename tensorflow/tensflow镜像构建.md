@@ -81,9 +81,19 @@ RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/${MINICOND
     echo "PATH=$PATH" >> /etc/profile
 
 # pip安装jupyterLab、tensorboard，tensorboard依赖的numpy版本需要小于2.0
-RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard && \
-    rm -r /root/.cache/pip
-    
+RUN pip install --upgrade pip && pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard
+
+# pip安装tensorrt
+ARG TENSORRT_VERSION
+ARG CU_VERSION
+RUN	pip install wheel && \
+		pip install --upgrade tensorrt${CU_VERSION}==${TENSORRT_VERSION} && \
+		pip install --upgrade tensorrt_lean && \
+		pip install --upgrade tensorrt_dispatch && \
+    rm -r /root/.cache/pip && \
+    ln $(find / -name libnvinfer.so*) /usr/lib/libnvinfer.so.${TENSORRT_VERSION} && \
+    ln $(find / -name libnvinfer_plugin.so.*) /usr/lib/libnvinfer_plugin.so.${TENSORRT_VERSION}
+
 # 暴露 JupyterLab、TensorBoard的端口
 EXPOSE 8888 6006
 
@@ -412,6 +422,10 @@ PYTHON_VERSION=3.10
 # miniconda的安装包均放在：https://repo.anaconda.com/miniconda/。根据要安装的python版本、操作系统，选择对应的miniconda安装包。
 MINICONDA_PKG=Miniconda3-py310_24.5.0-0-Linux-x86_64.sh
 
+# tensorRT pip安装tensorRT后，需要指定软连接到/usr/lib下，否则会报tensorRT not found
+TENSORRT_VERSION=8.6.1
+CU_VERSION='' # 如果不填默认-cu12，也可指定-cu11
+
 # 从 TensorFlow 2.1 开始，pip 包 tensorflow 即同时包含 GPU 支持，无需通过特定的 pip 包 tensorflow-gpu 安装 GPU 版本。
 # 如果安装tensorflow-gpu:1.x版本,则TENSORFLOW_TYPE设为tensorflow-gpu，TENSORFLOW_VERSION设为1.x
 TENSORFLOW_TYPE=tensorflow
@@ -425,6 +439,8 @@ docker build \
     --build-arg BASE_IMAGE=${BASE_IMAGE} \
     --build-arg PYTHON_VERSION=${PYTHON_VERSION} \
     --build-arg MINICONDA_PKG=${MINICONDA_PKG} \
+    --build-arg TENSORRT_VERSION=${TENSORRT_VERSION} \
+    --build-arg CU_VERSION=${CU_VERSION} \
     --build-arg TENSORFLOW_TYPE=${TENSORFLOW_TYPE} \
     --build-arg TENSORFLOW_VERSION=${TENSORFLOW_VERSION} \
     -t tensorflow:${IMAGE_TAG} \
