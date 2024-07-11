@@ -100,7 +100,7 @@ RUN if [ ! $TORCHAUDIO_VERSION ]; \
 
 # 3 Dockerfile中引用的文件
 Dockerfile中引用了init文件夹下。
-init文件夹github存放地址：https://github.com/matrix-dc/mlops-images/tree/main/common/init     
+init文件夹存放在github的common目录下：https://github.com/matrix-dc/mlops-images/tree/main/common/   
 
 注意：构建镜像时，init整个文件夹与Dockerfile放在同级目录下。    
 文件夹目录结构如下：
@@ -116,7 +116,7 @@ init文件夹github存放地址：https://github.com/matrix-dc/mlops-images/tree
 ## 3.1 /init/bin/supervisord
 /init/bin/supervisord是个bin文件，后续用此supervisord启动服务。  
 
-## 3.2 ./init/boot/boot.sh
+## 3.2 /init/boot/boot.sh
 /init/boot/boot.sh是CMD启动脚本，此脚本中通过curl的方式获取在线文件start.sh，start.sh脚本中其中一个步骤是通过curl获取在线文件init.py，这样组织的好处是：start.sh、init.py文件内容有变化时无需重新Build镜像。        
 1、start.sh    
 start.sh文件存放在github：https://github.com/matrix-dc/mlops-images/blob/main/common/online-files/start.sh              
