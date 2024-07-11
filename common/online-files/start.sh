@@ -36,4 +36,3 @@ echo "pre cmd finished" >> /tmp/boot.log
 
 echo "supervisord begin" >> /tmp/boot.log
 /bin/supervisord -c /init/supervisor/supervisor.ini
-echo "supervisord start finished" >> /tmp/boot.log
