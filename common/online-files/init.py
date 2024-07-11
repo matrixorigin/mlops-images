@@ -9,7 +9,7 @@ printf "+-----------------------------------------------------------------------
 printf "\033[32m目录说明:\033[0m\n"
 printf "╔═════════════════╦════════╦════╦═════════════════════════════════════════════════════════════════════════╗\n"
 printf "║目录             ║名称    ║速度║说明                                                                     ║\n"
-printf "╠═════════════════╬════════╬════╬═════════════════════════════════════════════════════════════════════════╣\n"
+printf "╠═════════════════╬════════╬════╬═══════════════════════════════════════════════════════���═════════════════╣\n"
 printf "║/                ║系 统 盘║一般║实例关机数据不会丢失，可存放代码等。会随保存镜像一起保存。               ║\n"
 printf "╚═════════════════╩════════╩════╩═════════════════════════════════════════════════════════════════════════╝\n"
 
@@ -50,6 +50,55 @@ printf "+-----------------------------------------------------------------------
 
 alias sudo=""
 '''
+jupyter_config = '''c.ServerApp.ip = '0.0.0.0'
+c.ServerApp.port = 8888
+c.NotebookApp.open_browser = False
+
+# 0.5.1版本前创建的容器还使用/ 作为root dir
+import os
+c.ServerApp.root_dir = "/root"
+c.MultiKernelManager.default_kernel_name = 'python3'
+c.NotebookNotary.db_file = ':memory:'
+c.ServerApp.tornado_settings = {
+    'headers': {
+        'Content-Security-Policy': "frame-ancestors * 'self' "
+    }
+}
+
+c.ServerApp.allow_remote_access = True
+c.ServerApp.base_url='/jupyter/'
+c.ServerApp.allow_origin='*'
+'''
+
+supervisor_conf = '''[supervisord]
+nodaemon=true
+logfile=/tmp/supervisord.log
+pidfile=/tmp/supervisord.pid
+
+
+[program:sshd]
+command=/usr/sbin/sshd -D
+autostart=true
+autorestart=true
+stderr_logfile=/tmp/sshd.err.log
+stdout_logfile=/tmp/sshd.out.log
+
+[program:jupyterlab]
+command=/root/miniconda3/bin/jupyter-lab --allow-root --config=/root/.jupyter/jupyter_config.py
+directory=/root
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+redirect_stderr=true
+
+[program:tensorboard]
+command=/root/miniconda3/bin/tensorboard --host 0.0.0.0 --port 6006 --logdir /root/tensorboard-logs --path_prefix /monitor
+directory=/root
+autostart=true
+autorestart=true
+stderr_logfile=/tmp/tensorboard.err.log
+stdout_logfile=/tmp/tensorboard.out.log
+'''
 
 
 def try_catch(func):
@@ -76,10 +125,17 @@ def init_jupyter():
     with open(os.path.join(lang_setting_path, "plugin.jupyterlab-settings"), "w") as fo:
         fo.write('''{"locale": "zh_CN"}
         ''')
-    with open("/init/jupyter/jupyter_config.py", "a") as fo:
-        fo.write("\nc.NotebookApp.allow_remote_access = True\n")
-        fo.write("c.NotebookApp.iopub_data_rate_limit = 1000000.0\n")
-        fo.write("c.NotebookApp.rate_limit_window = 3.0\n")
+    with open("/root/.jupyter/jupyter_config.py", "w") as fo:
+        fo.write(jupyter_config)
+
+
+@try_catch
+def init_supervisor():
+    supervisor_ini_path = "/init/supervisor"
+    if not os.path.exists(supervisor_ini_path):
+        os.makedirs(supervisor_ini_path)
+    with open(os.path.join(supervisor_ini_path, "supervisor.ini"), "w") as fo:
+        fo.write(supervisor_conf)
 
 
 @try_catch
@@ -127,6 +183,7 @@ if __name__ == '__main__':
     if not os.path.exists(flag_file):
         try:
             init_jupyter()
+            init_supervisor()
             init_motd()
             init_shutdown()
             init_conda_source()
