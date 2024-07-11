@@ -52,7 +52,7 @@ alias sudo=""
 '''
 jupyter_config = '''c.ServerApp.ip = '0.0.0.0'
 c.ServerApp.port = 8888
-c.NotebookApp.open_browser = False
+c.ServerApp.open_browser = False
 
 # 0.5.1版本前创建的容器还使用/ 作为root dir
 import os
