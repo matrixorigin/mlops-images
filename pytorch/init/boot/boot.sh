@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "begin download start.sh file"i > /tmp/boot.log
+echo "begin download start.sh file" > /tmp/boot.log
 rm -rf /tmp/gpuhub && mkdir  /tmp/gpuhub
 curl --connect-timeout 10 -o /tmp/gpuhub/start.sh https://sharefile.43.143.130.168.nip.io:30443/file/start.sh -k -s
 
