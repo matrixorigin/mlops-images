@@ -5,7 +5,7 @@ echo $PATH >> /tmp/boot.log
 
 # 设置SSH登录密码
 echo "begin set passwd" >> /tmp/boot.log
-[ -f /sync/root-passwd ] && cat root_passwd=$(cat /sync/root-passwd) && echo "root:$root_passwd" | chpasswd && rm /sync/root-passwd
+[ -f /sync/root-passwd ] && root_passwd=$(cat /sync/root-passwd) && echo "root:$root_passwd" | chpasswd && rm /sync/root-passwd
 echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
 mkdir -p /run/sshd || true
 echo "passwd set finished" >> /tmp/boot.log
