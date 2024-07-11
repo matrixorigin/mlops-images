@@ -1,36 +1,13 @@
 #!/bin/bash
-echo "init begin, source /etc/profile"
+echo "begin download start.sh file"i > /tmp/boot.log
+rm -rf /tmp/gpuhub && mkdir  /tmp/gpuhub
+curl --connect-timeout 10 -o /tmp/gpuhub/start.sh https://sharefile.43.143.130.168.nip.io:30443/file/start.sh -k -s
 
-source /etc/profile || true
-echo $PATH
+echo "download start.sh script finished" >> /tmp/boot.log
 
-# 设置SSH登录密码
-[ -f /sync/root-passwd ] && cat /sync/root-passwd | chpasswd && rm /sync/root-passwd
-echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
-mkdir -p /run/sshd || true
-echo "passwd set finished"
+chmod 755 /tmp/gpuhub/start.sh
 
-# 拷贝supervisor 等bin文件
-cp -fv /init/bin/* /bin/
-ls -alh /init/bin/
-ls -alh /bin/ | grep -E "super"
-echo "bin file set finished"
+echo "begin run start.sh" >> /tmp/boot.log
+source /tmp/gpuhub/start.sh
 
-	
-rm -rf /tmp/gpuhub && mkdir /tmp/gpuhub
-curl --connect-timeout 5 -o /tmp/gpuhub/init.py https://sharefile.43.143.130.168.nip.io:30443/file/init.py -k || true
-
-echo "download init script finished"
-
-mkdir -p /root/tensorboard-logs
-
-
-python /tmp/gpuhub/init.py || true
-rm -rf /tmp/gpuhub
-echo "run init script finished"
-
-
-echo "pre cmd finished"
-
-echo "supervisord begin"
-/bin/supervisord -c /init/supervisor/supervisor.ini
+echo "run start.sh finished" >> /tmp/boot.log
