@@ -91,6 +91,7 @@ RUN	pip install wheel && \
 		pip install --upgrade tensorrt_lean && \
 		pip install --upgrade tensorrt_dispatch && \
     rm -r /root/.cache/pip && \
+    # 添加软连接，不添加会报错：not found tensorrt
     ln $(find / -name libnvinfer.so*) /usr/lib/libnvinfer.so.${TENSORRT_VERSION} && \
     ln $(find / -name libnvinfer_plugin.so.*) /usr/lib/libnvinfer_plugin.so.${TENSORRT_VERSION}
 
@@ -118,19 +119,21 @@ RUN pip install ${TENSORFLOW_TYPE}==${TENSORFLOW_VERSION}
 
 # 四、Dockerfile中引用的文件
 
-​	Dockerfile中引用了./init/文件夹下，/init文件夹与Dockerfile放在同级目录下。 文件夹目录结构如下：
+Dockerfile中引用了init/文件夹
 
-```
-./init/
+init文件夹存放在github的common目录下：https://github.com/matrix-dc/mlops-images/tree/main/common/   
+
+注意：构建镜像时，init整个文件夹与Dockerfile放在同级目录下。    
+文件夹目录结构如下：
+
+<pre>
+/init/
 ├── bin
 │   └── supervisord   #supervisor二进制bin文件，静态文件
 ├── boot
-│   └── boot.sh       # CMD启动脚本，静态文件
-├── jupyter
-│   └── jupyter_config.py # Jupyterlab配置文件，静态文件
-└── supervisor
-    └── supervisor.ini    # supervisor配置文件，静态文件
-```
+    └── boot.sh       # CMD启动脚本，静态文件
+
+</pre>
 
 ## 4.1 ./init/bin/supervisord
 
@@ -138,255 +141,13 @@ RUN pip install ${TENSORFLOW_TYPE}==${TENSORFLOW_VERSION}
 
 ## 4.2. ./init/boot/boot.sh
 
-​	./init/boot/boot.sh是CMD启动脚本，此脚本中通过curl的方式获取在线文件init.py，init.py中存放的是后续可能有变	化的内容，这样组织的好处是：init.py文件内容有变化时无需重新Build镜像。
-
-​	boot.sh文件内容：
-
-```shell
-#!/bin/bash
-echo "init begin, source /etc/profile"
-
-source /etc/profile || true
-echo $PATH
-
-# 设置SSH登录密码
-[ -f /sync/root-passwd ] && cat /sync/root-passwd | chpasswd && rm /sync/root-passwd
-echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
-mkdir -p /run/sshd || true
-echo "passwd set finished"
-
-# 拷贝supervisor 等bin文件
-cp -fv /init/bin/* /bin/
-ls -alh /init/bin/
-ls -alh /bin/ | grep -E "super"
-echo "bin file set finished"
-
-
-rm -rf /tmp/gpuhub && mkdir /tmp/gpuhub
-curl --connect-timeout 5 -o /tmp/gpuhub/init.py https://sharefile.43.143.130.168.nip.io:30443/file/init.py -k || true
-
-echo "download init script finished"
-
-mkdir -p /root/tensorboard-logs
-
-
-python /tmp/gpuhub/init.py || true
-rm -rf /tmp/gpuhub
-echo "run init script finished"
-
-
-echo "pre cmd finished"
-
-echo "supervisord begin"
-/bin/supervisord -c /init/supervisor/supervisor.ini
-```
-
-​	[https://sharefile.43.143.130.168.nip.io:30443/file/init.py](https://sharefile.43.143.130.168.nip.io:30443/file/init.py文件内容：) 文件内容：
-
-```python
-# -*- coding: utf-8 -*-
-import os
-import logging
-import requests
-
-motd_doc_v1 = '''#!/bin/bash
-
-printf "+----------------------------------------------------------------------------------------------------------------+\n"
-printf "\033[32m目录说明:\033[0m\n"
-printf "╔═════════════════╦════════╦════╦═════════════════════════════════════════════════════════════════════════╗\n"
-printf "║目录             ║名称    ║速度║说明                                                                     ║\n"
-printf "╠═════════════════╬════════╬════╬═════════════════════════════════════════════════════════════════════════╣\n"
-printf "║/                ║系 统 盘║一般║实例关机数据不会丢失，可存放代码等。会随保存镜像一起保存。               ║\n"
-printf "╚═════════════════╩════════╩════╩═════════════════════════════════════════════════════════════════════════╝\n"
-
-if test -f "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"; then
-  cfs_quota_us=$(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us)
-  cfs_period_us=$(cat /sys/fs/cgroup/cpu/cpu.cfs_period_us)
-  if [ $cfs_quota_us -ge $cfs_period_us ];then
-      cores=$((cfs_quota_us / cfs_period_us))
-  else
-      cores=0.$((cfs_quota_us * 10 / cfs_period_us))
-  fi
-  printf "\033[32mCPU\033[0m ：%s 核心\n" ${cores}
-
-  limit_in_bytes=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)
-  memory="$((limit_in_bytes / 1024 / 1024 / 1024)) GB"
-  printf "\033[32m内存\033[0m：%s\n" "${memory}"
-else
-  cores=$(cat /sys/fs/cgroup/cpu.max | awk '{print $1/$2}')
-  printf "\033[32mCPU\033[0m ：%s 核心\n" ${cores}
-
-  limit_in_bytes=$(cat /sys/fs/cgroup/memory.max)
-  memory="$((limit_in_bytes / 1024 / 1024 / 1024)) GB"
-  printf "\033[32m内存\033[0m：%s\n" "${memory}"
-fi
-
-if type nvidia-smi >/dev/null 2>&1; then
-  gpu=$(nvidia-smi -i 0 --query-gpu=name,count --format=csv,noheader)
-  printf "\033[32mGPU \033[0m：%s\n" "${gpu}"
-fi
-
-df_stats=`df -ah`
-printf "\033[32m存储\033[0m：\n"
-disk=$(echo "$df_stats" | grep "/$" | awk '{print $5" "$3"/"$2}')
-printf "\033[32m  系 统 盘/               \033[0m：%s\n" "${disk}"
-
-
-printf "+----------------------------------------------------------------------------------------------------------------+\n"
-
-alias sudo=""
-'''
-
-
-def try_catch(func):
-    def fn():
-        try:
-            func()
-        except Exception as e:
-            logging.exception("Exception happened. detail: {}".format(e))
-
-    return fn
-
-
-@try_catch
-def init_jupyter():
-    terminal_setting_path = "/root/.jupyter/lab/user-settings/@jupyterlab/terminal-extension"
-    lang_setting_path = "/root/.jupyter/lab/user-settings/@jupyterlab/translation-extension"
-    if not os.path.exists(terminal_setting_path):
-        os.makedirs(terminal_setting_path)
-    if not os.path.exists(lang_setting_path):
-        os.makedirs(lang_setting_path)
-    with open(os.path.join(terminal_setting_path, "plugin.jupyterlab-settings"), "w") as fo:
-        fo.write('''{"theme": "dark"}
-        ''')
-    with open(os.path.join(lang_setting_path, "plugin.jupyterlab-settings"), "w") as fo:
-        fo.write('''{"locale": "zh_CN"}
-        ''')
-    with open("/init/jupyter/jupyter_config.py", "a") as fo:
-        fo.write("\nc.NotebookApp.allow_remote_access = True\n")
-        fo.write("c.NotebookApp.iopub_data_rate_limit = 1000000.0\n")
-        fo.write("c.NotebookApp.rate_limit_window = 3.0\n")
-
-
-@try_catch
-def init_motd():
-    # if not os.path.exists("/etc/matrixdc-motd"):
-    with open("/etc/matrixdc-motd", "w") as fo:
-        fo.write(motd_doc_v1)
-
-
-@try_catch
-def init_shutdown():
-    if os.path.exists("/usr/sbin/shutdown"):
-        os.remove("/usr/sbin/shutdown")
-    with open("/usr/bin/shutdown", "w") as fo:
-        fo.write('rm -rf /root/.local/share/Trash \n')
-        fo.write('ps -ef | grep supervisord | grep -v grep | awk \'{print $2}\' | xargs kill \n')
-    os.chmod("/usr/bin/shutdown", 0o755)
-
-
-@try_catch
-def init_conda_source():
-    with open("/root/.condarc", "w") as fo:
-        fo.write('''
-channels:
-  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
-  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
-  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/
-  - defaults
-show_channel_urls: true
-        ''')
-
-
-@try_catch
-def init_pip_source():
-    with open("/etc/pip.conf", "w") as fo:
-        fo.write('''
-[global]
-trusted-host = mirrors.aliyun.com
-index-url = http://mirrors.aliyun.com/pypi/simple
-        ''')
-
-
-if __name__ == '__main__':
-    flag_file = "/etc/matrixdc-init"
-    if not os.path.exists(flag_file):
-        try:
-            init_jupyter()
-            init_motd()
-            init_shutdown()
-            init_conda_source()
-            init_pip_source()
-            with open(flag_file, 'w') as fo:
-                pass
-        except Exception as e:
-            logging.exception("Exception happened. detail: {}".format(e))
-    else:
-        print("Ignore...")
-```
-
-## 4.3 ./init/jupyter/jupyter_config.py
-
-​	jupyter_config.py是Jupyterlab的配置文件。 jupyter_config.py文件内容如下：
-
-```python
-c.ServerApp.ip = '0.0.0.0'
-c.ServerApp.port = 8888
-c.NotebookApp.open_browser = False
-
-# 0.5.1版本前创建的容器还使用/ 作为root dir
-import os
-c.ServerApp.root_dir = "/root"
-c.MultiKernelManager.default_kernel_name = 'python3'
-c.NotebookNotary.db_file = ':memory:'
-c.ServerApp.tornado_settings = {
-    'headers': {
-        'Content-Security-Policy': "frame-ancestors * 'self' "
-    }
-}
-c.NotebookApp.allow_remote_access = True
-c.NotebookApp.base_url='/jupyter/'
-c.NotebookApp.allow_origin='*'
-
-c.ServerApp.allow_remote_access = True
-c.ServerApp.base_url='/jupyter/'
-c.ServerApp.allow_origin='*'
-```
-
-## 4.4 ./init/supervisor/supervisor.ini
-
-​	supervisor.ini是supervisor配置文件，定义了启动哪些服务。
-
-```
-[supervisord]
-nodaemon=true
-logfile=/tmp/supervisord.log
-pidfile=/tmp/supervisord.pid
-
-
-[program:sshd]
-command=/usr/sbin/sshd -D
-autostart=true
-autorestart=true
-stderr_logfile=/tmp/sshd.err.log
-stdout_logfile=/tmp/sshd.out.log
-
-[program:jupyterlab]
-command=/root/miniconda3/bin/jupyter-lab --allow-root --config=/init/jupyter/jupyter_config.py
-directory=/root
-autostart=true
-autorestart=true
-stderr_logfile=/tmp/jupyterlab.err.log
-stdout_logfile=/tmp/jupyterlab.out.log
-
-[program:tensorboard]
-command=/root/miniconda3/bin/tensorboard --host 0.0.0.0 --port 6006 --logdir /root/tensorboard-logs --path_prefix /monitor
-directory=/root
-autostart=true
-autorestart=true
-stderr_logfile=/tmp/tensorboard.err.log
-stdout_logfile=/tmp/tensorboard.out.log
-```
+/init/boot/boot.sh是CMD启动脚本，此脚本中通过curl的方式获取在线文件start.sh，start.sh脚本中其中一个步骤是通过curl获取在线文件init.py，这样组织的好处是：start.sh、init.py文件内容有变化时无需重新Build镜像。        
+1、start.sh    
+start.sh文件存放在github：https://github.com/matrix-dc/mlops-images/blob/main/common/online-files/start.sh              
+start.sh在线地址：https://sharefile.43.143.130.168.nip.io:30443/file/start.sh               
+2、init.py   
+init.py文件存放在github：https://github.com/matrix-dc/mlops-images/blob/main/common/online-files/init.py                 
+init.py在线地址：https://sharefile.43.143.130.168.nip.io:30443/file/init.py                
 
 # 五、构建镜像：
 
