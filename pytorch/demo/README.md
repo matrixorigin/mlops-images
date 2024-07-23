@@ -2,6 +2,7 @@
 # 一、用到的数据集和文件说明
 要用到的数据集和python文件放在demo目录下：https://github.com/matrix-dc/mlops-images/tree/main/pytorch/demo。
 demo目录说明：
+<pre>
 demo
 ├── data   # 存放cifar10数据集，已下载并解压好。模型训练时用到此数据集。数据集下载地址：https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
 │  └── cifar-10-batches-py
@@ -11,6 +12,7 @@ demo
 ├── model.py # 网络模型model.py
 ├── test.py  # 模型测试test.py
 └── train.py # 模型训练及验证train.py
+</pre>
 
 将data、imgs、model.py、test.py、train.py下载到本地，后续要上传到pytorch环境中使用。
 
