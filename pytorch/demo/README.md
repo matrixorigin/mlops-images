@@ -3,9 +3,8 @@
 要用到的数据集和python文件放在demo目录下：https://github.com/matrix-dc/mlops-images/tree/main/pytorch/demo。
 demo目录说明：
 demo
-├── data   # 存放数据集，这里用的是cifar10数据集，已下载并解压好。模型训练时用到此数据集
-│   ├── cifar-10-batches-py
-│   └── cifar-10-python.tar.gz
+├── data   # 存放cifar10数据集，已下载并解压好。模型训练时用到此数据集。数据集下载地址：https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
+│  └── cifar-10-batches-py
 ├── imgs   # 放置要推理的照片（飞机和小狗），模型测试要用到此照片。说明：在cifar10数据集中，飞机类别序号是0，小狗类型序号是5。
 │   ├── airplane.png
 │   └── dog.png
@@ -66,11 +65,15 @@ https://ai.neolink.com/
 python model.py
 ![alt text](./assets/model.png)
 ## 5.2 模型训练集验证
+### 5.2.1 模型训练
 python train.py
 ![alt text](./assets/train-1.png)
 train.py指定总共训练10次，在当前目录下会生产对应的模型训练文件
 ![alt text](./assets/train-2.png)
-
+### 5.2.2 查看tensorboard得到的scalar图
+查看方法：在实例列表，点击内置工具tensorboard，切换到scalars，查看可视化图
+![alt text](./assets/tensorboard-0.png)
+![alt text](./assets/tensorboard.png)
 ## 5.3 模型推理测试
 python test.py
 ![alt text](./assets/test.png)
