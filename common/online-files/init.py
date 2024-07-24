@@ -9,8 +9,11 @@ printf "+-----------------------------------------------------------------------
 printf "\033[32m目录说明:\033[0m\n"
 printf "╔═════════════════╦════════╦════╦═════════════════════════════════════════════════════════════════════════╗\n"
 printf "║目录             ║名称    ║速度║说明                                                                     ║\n"
-printf "╠═════════════════╬════════╬════╬═══════════════════════════════════════════════════════���═════════════════╣\n"
-printf "║/                ║系 统 盘║一般║实例关机数据不会丢失，可存放代码等。会随保存镜像一起保存。               ║\n"
+printf "╠═════════════════╬════════╬════╬═════════════════════════════════════════════════════════════════════════╣\n"
+printf "║/                ║系 统 盘║快  ║一般系统依赖以及Python安装包都会安装在系统盘下，也可以存放代码等小容量的 ║\n"
+printf "║                 ║        ║    ║数据；实例关机可选择将已有环境和数据保存到镜像中，下次开机数据可恢复。   ║\n"
+printf "╠═════════════════╣════════╣════╣═════════════════════════════════════════════════════════════════════════╣\n"
+printf "║用户定义的路径   ║数 据 盘║快  ║数据盘挂载路径默认是/root/data，用户可自定义。可以存放数据。             ║\n"
 printf "╚═════════════════╩════════╩════╩═════════════════════════════════════════════════════════════════════════╝\n"
 
 if test -f "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"; then
@@ -100,6 +103,9 @@ stderr_logfile=/tmp/tensorboard.err.log
 stdout_logfile=/tmp/tensorboard.out.log
 '''
 
+# 设置不打印hami日志
+hami_log_level = '''export LIBCUDA_LOG_LEVEL=0'''
+
 
 def try_catch(func):
     def fn():
@@ -146,6 +152,16 @@ def init_motd():
 
 
 @try_catch
+def init_profile():
+    with open("/etc/profile", "r") as fo:
+        lines = fo.readlines()
+    # 检查行是否已经存在
+    if hami_log_level not in lines:
+        # 如果不存在，打开文件并追加行
+        with open("/etc/profile", 'a') as fo:
+            fo.write(hami_log_level + '\n')
+
+@try_catch
 def init_shutdown():
     if os.path.exists("/usr/sbin/shutdown"):
         os.remove("/usr/sbin/shutdown")
@@ -185,6 +201,7 @@ if __name__ == '__main__':
             init_jupyter()
             init_supervisor()
             init_motd()
+            init_profile()
             init_shutdown()
             init_conda_source()
             init_pip_source()
