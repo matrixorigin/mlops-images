@@ -2,6 +2,8 @@
 import os
 import logging
 import requests
+
+
 # update
 motd_doc_v1 = '''#!/bin/bash
 
@@ -27,14 +29,14 @@ if test -f "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"; then
   printf "\033[32mCPU\033[0m ：%s 核心\n" ${cores}
 
   limit_in_bytes=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)
-  memory="$((limit_in_bytes / 1024 / 1024 / 1024)) GB"
+  memory="$((limit_in_bytes / 1024 / 1024 / 1024)) G"
   printf "\033[32m内存\033[0m：%s\n" "${memory}"
 else
   cores=$(cat /sys/fs/cgroup/cpu.max | awk '{print $1/$2}')
   printf "\033[32mCPU\033[0m ：%s 核心\n" ${cores}
 
   limit_in_bytes=$(cat /sys/fs/cgroup/memory.max)
-  memory="$((limit_in_bytes / 1024 / 1024 / 1024)) GB"
+  memory="$((limit_in_bytes / 1024 / 1024 / 1024)) G"
   printf "\033[32m内存\033[0m：%s\n" "${memory}"
 fi
 
@@ -45,14 +47,38 @@ fi
 
 df_stats=`df -ah`
 printf "\033[32m存储\033[0m：\n"
-disk=$(echo "$df_stats" | grep "/$" | awk '{print $5" "$3"/"$2}')
-printf "\033[32m  系 统 盘/               \033[0m：%s\n" "${disk}"
 
+# 处理系统盘展示
+disk=$(echo "$df_stats" | grep "/$" | awk '{print $5" "$3"/"$2}')
+printf "\033[32m  系统盘 /\033[0m：%s\n" "${disk}"
+
+# 处理数据盘展示
+# 分别处理两个模式
+disk_data_juicefs=$(echo "$df_stats" | grep "JuiceFS:system-juicefs" | awk '{print $6" : "$5" "$3"/"$2}')
+disk_data_neo=$(echo "$df_stats" | grep "neo-fileserver:/shared-files" | awk '{print $6" : "$5" "$3"/"$2}')
+
+# 合并两个结果
+disk_data="$disk_data_juicefs"
+disk_data+="
+$disk_data_neo"
+
+# 使用 IFS 设置换行符作为字段分隔符，并读取到数组中
+IFS=$'\n' read -d '' -r -a data_disks <<< "$disk_data"
+
+# 遍历数组并打印每一条记录
+for line in "${data_disks[@]}"; do
+  # 分割 line 以获取路径和其余信息
+  IFS=' : ' read -r path rest <<< "$line"
+  # 使用绿色输出数据盘信息，保持其余信息默认颜色
+  printf "\033[32m  数据盘 %s\033[0m：%s\n" "$path" "$rest"
+done
 
 printf "+----------------------------------------------------------------------------------------------------------------+\n"
 
 alias sudo=""
 '''
+
+
 jupyter_config = '''c.ServerApp.ip = '0.0.0.0'
 c.ServerApp.port = 8888
 c.ServerApp.open_browser = False
@@ -72,6 +98,7 @@ c.ServerApp.allow_remote_access = True
 c.ServerApp.base_url='/jupyter/'
 c.ServerApp.allow_origin='*'
 '''
+
 
 supervisor_conf = '''[supervisord]
 nodaemon=true
@@ -102,6 +129,7 @@ autorestart=true
 stderr_logfile=/tmp/tensorboard.err.log
 stdout_logfile=/tmp/tensorboard.out.log
 '''
+
 
 # 设置不打印hami日志
 hami_log_level = '''export LIBCUDA_LOG_LEVEL=0'''
@@ -189,8 +217,25 @@ def init_pip_source():
     with open("/etc/pip.conf", "w") as fo:
         fo.write('''
 [global]
+index-url = https://pypi.tuna.tsinghua.edu.cn/simple
+extra-index-url = http://mirrors.aliyun.com/pypi/simple
+trusted-host = pypi.tuna.tsinghua.edu.cn
 trusted-host = mirrors.aliyun.com
-index-url = http://mirrors.aliyun.com/pypi/simple
+        ''')
+
+
+@try_catch
+def init_apt_source():
+    if not os.path.exists("/etc/apt/source.list.bak"):
+        command = "cp -a /etc/apt/source.list /etc/apt/source.list.bak"
+        os.system(command)
+    with open("/etc/apt/source.list", "w") as fo:
+        fo.write('''
+deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy main restricted universe multiverse
+deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy-security main restricted universe multiverse
+deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy-updates main restricted universe multiverse
+deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy-proposed main restricted universe multiverse
+deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy-backports main restricted universe multiverse
         ''')
 
 
@@ -205,6 +250,7 @@ if __name__ == '__main__':
             init_shutdown()
             init_conda_source()
             init_pip_source()
+            init_apt_source()
             with open(flag_file, 'w') as fo:
                 pass
         except Exception as e:
