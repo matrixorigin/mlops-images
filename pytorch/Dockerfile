@@ -10,7 +10,7 @@ ENV SHELL=/bin/bash
 ENV USER=root
 ENV MOTD_SHOWN=pam
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteracti apt-get install -y --no-install-recommends openssh-server locales tzdata curl vim tmux wget  && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && DEBIAN_FRONTEND=noninteracti apt-get install -y --no-install-recommends openssh-server locales tzdata curl vim tmux wget git git-lfs && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 设置时区为 Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
