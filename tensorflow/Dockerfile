@@ -20,6 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tmux \
     wget \
     locales \
+    git \
+    git-lfs \
+    iputils-ping \
     tzdata && apt-get clean && rm -rf /var/lib/apt/lists/*
     
 # 设置时区
