@@ -215,12 +215,9 @@ show_channel_urls: true
 @try_catch
 def init_pip_source():
     with open("/etc/pip.conf", "w") as fo:
-        fo.write('''
-[global]
+        fo.write('''[global]
 index-url = https://pypi.tuna.tsinghua.edu.cn/simple
-extra-index-url = http://mirrors.aliyun.com/pypi/simple
 trusted-host = pypi.tuna.tsinghua.edu.cn
-trusted-host = mirrors.aliyun.com
         ''')
 
 
