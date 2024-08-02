@@ -20,14 +20,14 @@ else
 fi
 
 echo "begin download init script" >> /tmp/boot.log 
-curl --connect-timeout 10 -o /tmp/gpuhub/init.py http://sharefile.neolink.com/file/init-100.py -k -s
+curl --connect-timeout 10 -o /tmp/gpuhub/init.py http://sharefile.neolink.com/file/init-h100.py -k -s
 echo "download init script finished" >> /tmp/boot.log
 
 mkdir -p /root/tensorboard-logs
 echo "create tensorboard dir finished" >> /tmp/boot.log
 
 echo "begin run init script" >> /tmp/boot.log
-python /tmp/gpuhub/init.py
+python /tmp/gpuhub/init-h100.py
 rm -rf /tmp/gpuhub
 echo "run init script finished" >> /tmp/boot.log
 
