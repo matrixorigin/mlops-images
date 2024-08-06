@@ -79,16 +79,11 @@ alias sudo=""
 '''
 
 
-jupyter_config = '''import os
-
-c = get_config()
+jupyter_config = '''c = get_config()
 
 c.ServerApp.ip = '0.0.0.0'
 c.ServerApp.port = 8888
 c.ServerApp.open_browser = False
-# 从ENV JUPYTER_TOKEN中获取jupyter token，如果无此ENV，则token为空
-c.IdentityProvider.token = os.environ.get('JUPYTER_TOKEN', '')
-
 c.ServerApp.root_dir = "/root"
 c.MultiKernelManager.default_kernel_name = 'python3'
 c.NotebookNotary.db_file = ':memory:'
@@ -97,10 +92,16 @@ c.ServerApp.tornado_settings = {
         'Content-Security-Policy': "frame-ancestors * 'self' "
     }
 }
-
 c.ServerApp.allow_remote_access = True
 c.ServerApp.base_url='/jupyter/'
 c.ServerApp.allow_origin='*'
+
+# 从 ENV JUPYTER_TOKEN 中获取 Jupyter token，如果无此 ENV，则不指定 token
+import os
+jupyter_token = os.environ.get('JUPYTER_TOKEN')
+print(f"JUPYTER_TOKEN value: {jupyter_token}")
+if jupyter_token:
+    c.IdentityProvider.token = jupyter_token
 '''
 
 
