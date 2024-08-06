@@ -79,12 +79,16 @@ alias sudo=""
 '''
 
 
-jupyter_config = '''c.ServerApp.ip = '0.0.0.0'
+jupyter_config = '''import os
+
+c = get_config()
+
+c.ServerApp.ip = '0.0.0.0'
 c.ServerApp.port = 8888
 c.ServerApp.open_browser = False
+# 从ENV JUPYTER_TOKEN中获取jupyter token，如果无此ENV，则token为空
+c.IdentityProvider.token = os.environ.get('JUPYTER_TOKEN', '')
 
-# 0.5.1版本前创建的容器还使用/ 作为root dir
-import os
 c.ServerApp.root_dir = "/root"
 c.MultiKernelManager.default_kernel_name = 'python3'
 c.NotebookNotary.db_file = ':memory:'
