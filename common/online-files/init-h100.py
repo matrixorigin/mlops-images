@@ -247,9 +247,9 @@ def init_apt_source():
 
         with open("/etc/apt/sources.list", "w") as fo:
             fo.write('''
-    deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy main restricted universe multiverse
-    deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy-updates main restricted universe multiverse
-    deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy-backports main restricted universe multiverse
+deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy main restricted universe multiverse
+deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy-updates main restricted universe multiverse
+deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy-backports main restricted universe multiverse
             ''')
         if os.path.exists("/etc/apt/sources.list.d"):
             command_mv = "mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bak"
