@@ -136,10 +136,6 @@ stdout_logfile=/tmp/tensorboard.out.log
 '''
 
 
-# 设置不打印hami日志
-hami_log_level = '''export LIBCUDA_LOG_LEVEL=0'''
-
-
 def try_catch(func):
     def fn():
         try:
@@ -186,13 +182,17 @@ def init_motd():
 
 @try_catch
 def init_profile():
+    # 设置不打印hami日志
+    hami_log_level = '''export LIBCUDA_LOG_LEVEL=0'''
+
     with open("/etc/profile", "r") as fo:
         lines = fo.readlines()
     # 检查行是否已经存在
-    if hami_log_level not in lines:
+    if hami_log_level not in lines and hami_log_level + '\n' not in lines:
         # 如果不存在，打开文件并追加行
         with open("/etc/profile", 'a') as fo:
             fo.write(hami_log_level + '\n')
+
 
 @try_catch
 def init_shutdown():
@@ -228,17 +228,47 @@ trusted-host = pypi.tuna.tsinghua.edu.cn
 
 @try_catch
 def init_apt_source():
-    if not os.path.exists("/etc/apt/source.list.bak"):
-        command = "cp -a /etc/apt/source.list /etc/apt/source.list.bak"
-        os.system(command)
-    with open("/etc/apt/source.list", "w") as fo:
-        fo.write('''
-deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy main restricted universe multiverse
-deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy-security main restricted universe multiverse
-deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy-updates main restricted universe multiverse
-deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy-proposed main restricted universe multiverse
-deb [arch=amd64] http://172.24.162.98/ubuntu/ jammy-backports main restricted universe multiverse
-        ''')
+    if not os.path.exists("/etc/apt/sources.list.bak"):
+        if os.path.exists("/etc/apt/sources.list"):
+            command_cp = "cp -a /etc/apt/sources.list /etc/apt/sources.list.bak"
+            os.system(command_cp)
+
+        with open("/etc/apt/sources.list", "w") as fo:
+            fo.write('''
+    deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy main restricted universe multiverse
+    deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy-updates main restricted universe multiverse
+    deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy-backports main restricted universe multiverse
+            ''')
+        if os.path.exists("/etc/apt/sources.list.d"):
+            command_mv = "mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bak"
+            # 如果目录存在，则将其重命名为备份
+            os.system(command_mv)
+
+        command_update = "apt update"
+        os.system(command_update)
+
+
+@try_catch
+def init_ssh_config():
+    # 配置项列表，空闲时间超过30分钟断开连接
+    config_lines = [
+        "PermitRootLogin yes",
+        "PasswordAuthentication yes",
+        "ClientAliveInterval 1800",
+        "ClientAliveCountMax 1"
+    ]
+
+    # 读取现有的配置文件内容
+    with open("/etc/ssh/sshd_config", "r") as fo:
+        existing_lines = fo.readlines()
+
+    # 检查并追加配置项
+    lines_to_add = [line + '\n' for line in config_lines if line + '\n' not in existing_lines]
+
+    # 如果有需要添加的行，则追加到文件末尾
+    if lines_to_add:
+        with open("/etc/ssh/sshd_config", "a") as fo:
+            fo.writelines(lines_to_add)
 
 
 if __name__ == '__main__':
@@ -249,6 +279,7 @@ if __name__ == '__main__':
             init_supervisor()
             init_motd()
             init_profile()
+            init_ssh_config()
             init_shutdown()
             init_conda_source()
             init_pip_source()
