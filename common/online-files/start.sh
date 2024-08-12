@@ -65,7 +65,7 @@ stderr_logfile=/tmp/sshd.err.log
 stdout_logfile=/tmp/sshd.out.log
 
 [program:jupyterlab]
-command=/root/miniconda3/bin/jupyter-lab --allow-root --config=/root/.jupyter/jupyter_config.py
+command=jupyter-lab --allow-root --config=/root/.jupyter/jupyter_config.py
 directory=/root
 autostart=true
 autorestart=true
@@ -73,7 +73,7 @@ stdout_logfile=/dev/stdout
 redirect_stderr=true
 
 [program:tensorboard]
-command=/root/miniconda3/bin/tensorboard --host 0.0.0.0 --port 6006 --logdir /root/tensorboard-logs --path_prefix /monitor
+command=tensorboard --host 0.0.0.0 --port 6006 --logdir /root/tensorboard-logs --path_prefix /monitor
 directory=/root
 autostart=true
 autorestart=true
