@@ -45,13 +45,14 @@ RUN mkdir /var/run/sshd && \
 EXPOSE 22
 
 # 阶段2：安装miniconda3(已内置指定python)、jupyterlab、tensorboard
-# 下载并安装 Miniconda，安装路径 /root/miniconda3
+# 下载并安装 Miniconda，安装路径 /opt/miniconda3
 ARG MINICONDA_PKG
-ENV PATH=/root/miniconda3/bin:$PATH
+ENV PATH=/opt/miniconda3/bin:$PATH
 RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/${MINICONDA_PKG} && \
-    bash /tmp/miniconda.sh -b -p /root/miniconda3 && \
+    bash /tmp/miniconda.sh -b -p /opt/miniconda3 && \
     rm /tmp/miniconda.sh && \
-    echo "PATH=$PATH" >> /etc/profile
+    echo "PATH=$PATH" >> /etc/profile && \
+    conda init
 
 # pip安装jupyterLab、tensorboard，tensorboard依赖的numpy版本需要小于2.0
 RUN pip install --upgrade pip && pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard
