@@ -8,6 +8,7 @@ FROM ${BASE_IMAGE}
 # 设置工作目录
 WORKDIR /root 
 
+ENV SHELL /bin/bash
 ENV USER=root
 ENV MOTD_SHOWN=pam
 
