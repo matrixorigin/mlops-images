@@ -211,8 +211,8 @@ function init_ssh_config() {
     config_lines=(
         "PermitRootLogin yes"
         "PasswordAuthentication yes"
-        "ClientAliveInterval 1800"
-        "ClientAliveCountMax 1"
+        "ClientAliveInterval 60"
+        "ClientAliveCountMax 5"
     )
 
     for line in "${config_lines[@]}"; do
@@ -238,18 +238,21 @@ function initialize_environment() {
 # 函数: 设置 SSH 密码
 function set_ssh_password() {
     log_info "begin set passwd"
-    if [ -f "/etc/sync_passwd" ]; then
-        local root_passwd
-        root_passwd=$(cat "/etc/sync_passwd")
-        echo "root:$root_passwd" | chpasswd
-        rm "/etc/sync_passwd"
-    fi
     if ! grep -q "^PermitRootLogin yes" /etc/ssh/sshd_config; then
         echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
     fi
 
     mkdir -p /run/sshd || true
-    log_info "passwd set finished"
+
+    if [ -f "/sync/root-passwd" ]; then
+        local root_passwd
+        root_passwd=$(cat "/sync/root-passwd")
+        echo "root:$root_passwd" | chpasswd
+        rm "/sync/root-passwd"
+        log_info "passwd set finished"
+    else
+        log_info "Error: /sync/root-passwd file not found."
+    fi    
 }
 
 
