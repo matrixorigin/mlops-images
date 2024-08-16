@@ -1,7 +1,7 @@
 ARG BASE_IMAGE
 
 FROM ghcr.io/open-webui/open-webui AS open-webui
-
+FROM ollama/ollama AS ollama
 # Stage 2: Final image
 FROM ${BASE_IMAGE}
 
@@ -13,6 +13,7 @@ ENV USER=root
 ENV MOTD_SHOWN=pam
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  ca-certificates \
   openssh-server \
   locales \
   tzdata \
@@ -56,6 +57,8 @@ RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/${MINICOND
 # pip安装jupyterLab、tensorboard，tensorboard依赖的numpy版本需要小于2.0
 RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard
 
+COPY --from=ollama /usr/bin/ollama /usr/bin/ollama
+
 # Copy built WebUI from the builder stage
 # Copy the open-webui files from the open-webui stage
 COPY --from=open-webui /app /app
@@ -76,4 +79,6 @@ EXPOSE 22 8888 6006 3000 11434
 ENV OLLAMA_BASE_URL=http://localhost:11434
 
 # 启动服务
-CMD ["bash", "/init/boot/boot.sh"]
+ENTRYPOINT [ "/init/boot/boot.sh" ]
+
+CMD ["ollama", "serve"]
