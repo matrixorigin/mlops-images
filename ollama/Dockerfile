@@ -78,7 +78,10 @@ EXPOSE 22 8888 6006 3000 11434
 # Set environment variable for Open WebUI
 ENV OLLAMA_BASE_URL=http://localhost:11434
 
-# 启动服务
-ENTRYPOINT [ "/init/boot/boot.sh" ]
+# supervisor配置文件放入ollama的启动命令
+RUN mkdir -p /etc/supervisord
+RUN echo "[program:ollama]" >> /etc/supervisord/supervisor-other.ini
+RUN echo "command=ollama serve" >> /etc/supervisord/supervisor-other.ini
 
-CMD ["ollama", "serve"]
+# 启动服务
+CMD ["bash", "/init/boot/boot.sh"]

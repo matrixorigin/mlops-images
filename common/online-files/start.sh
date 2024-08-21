@@ -79,6 +79,9 @@ autostart=true
 autorestart=true
 stderr_logfile=/tmp/tensorboard.err.log
 stdout_logfile=/tmp/tensorboard.out.log
+
+[include]
+files=/etc/supervisord/supervisor-other.ini
 EOF
 }
 
