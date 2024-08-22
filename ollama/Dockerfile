@@ -8,7 +8,7 @@ FROM ${BASE_IMAGE}
 # 设置工作目录
 WORKDIR /root 
 
-ENV SHELL /bin/bash
+ENV SHELL=/bin/bash
 ENV USER=root
 ENV MOTD_SHOWN=pam
 
@@ -76,7 +76,7 @@ RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
 # 暴露 SSH、JupyterLab、TensorBoard, Ollama, WebUI的端口
 EXPOSE 22 8888 6006 3000 11434
 # Set environment variable for Open WebUI
-ENV OLLAMA_BASE_URL=http://localhost:11434
+ENV OLLAMA_BASE_URL=0.0.0.0:11434
 
 # 启动服务
 ENTRYPOINT [ "/init/boot/boot.sh" ]

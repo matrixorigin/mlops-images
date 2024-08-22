@@ -15,8 +15,9 @@ Ollama+WebUI 包含以下核心组建
 - **Ollama**:  基于Golang和llama.cpp 的大语言模型运行时框架,兼容 OpenAI API 以及Phi3, Gemma2, Llama 系列大模型.
 - **Open WebUI**: 基于 Ollama 接口的大模型交换界面。
 
-#  二、
-#  三、使用指南
+# 二、
+
+# 三、使用指南
 
 ## 3.1. JupyterLab使用
 
@@ -26,5 +27,6 @@ Ollama+WebUI 包含以下核心组建
 
 ## 3.2. 启动 Ollama+WebUI
 
+1. 镜像默认通过`ollama serve`启动ollama服务，可以通过{URL}:11434访问到
 1. 访问JupyterLab：打开JupyterLab 的 Terminal 界面
-2. 执行/usr/local/bin/start_services.sh 启动Ollama 和 OpenWebUI.  访问`http://host:3000`，创建用户即可使用 OpenWebUI
+2. 进入`/app/backend`, 通过`./start.sh`即可启动webui服务。默认端口为3000
