@@ -27,6 +27,6 @@ Ollama+WebUI 包含以下核心组建
 
 ## 3.2. 启动 Ollama+WebUI
 
-1. 镜像默认通过`ollama serve`启动ollama服务，可以通过{URL}:11434访问到
-1. 访问JupyterLab：打开JupyterLab 的 Terminal 界面
-2. 进入`/app/backend`, 通过`./start.sh`即可启动webui服务。默认端口为3000
+1. 在Terminal下通过`ollama serve`启动ollama服务，可以通过{URL}:11434访问到
+2. 访问JupyterLab：打开JupyterLab 的 Terminal 界面
+3. 进入`/app/backend`, 通过`./start.sh`即可启动webui服务。默认端口为3000
