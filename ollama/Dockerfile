@@ -1,18 +1,19 @@
 ARG BASE_IMAGE
 
 FROM ghcr.io/open-webui/open-webui AS open-webui
-
+FROM ollama/ollama AS ollama
 # Stage 2: Final image
 FROM ${BASE_IMAGE}
 
 # 设置工作目录
 WORKDIR /root 
 
-ENV SHELL /bin/bash
+ENV SHELL=/bin/bash
 ENV USER=root
 ENV MOTD_SHOWN=pam
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  ca-certificates \
   openssh-server \
   locales \
   tzdata \
@@ -56,6 +57,8 @@ RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/${MINICOND
 # pip安装jupyterLab、tensorboard，tensorboard依赖的numpy版本需要小于2.0
 RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard
 
+COPY --from=ollama /usr/bin/ollama /usr/bin/ollama
+
 # Copy built WebUI from the builder stage
 # Copy the open-webui files from the open-webui stage
 COPY --from=open-webui /app /app
@@ -73,7 +76,12 @@ RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
 # 暴露 SSH、JupyterLab、TensorBoard, Ollama, WebUI的端口
 EXPOSE 22 8888 6006 3000 11434
 # Set environment variable for Open WebUI
-ENV OLLAMA_BASE_URL=http://localhost:11434
+ENV OLLAMA_BASE_URL=0.0.0.0:11434
 
-# 启动服务
+# supervisor配置文件放入ollama的启动命令
+RUN mkdir -p /etc/supervisord
+RUN echo "[program:ollama]" >> /etc/supervisord/supervisor-other.ini
+RUN echo "command=ollama serve" >> /etc/supervisord/supervisor-other.ini
+
+
 CMD ["bash", "/init/boot/boot.sh"]
