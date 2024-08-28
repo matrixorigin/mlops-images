@@ -1,48 +1,46 @@
 ################################################################################
 # Dockerfile that builds 'yanwk/comfyui-boot:cu121'
 # A runtime environment for https://github.com/comfyanonymous/ComfyUI
-# Using CUDA 12.1& Python 3.11
+# Using CUDA 12.1 & Python 3.11
 ################################################################################
 
-FROM opensuse/tumbleweed:latest
+FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
 
+# 使用APT来安装软件包并缓存
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+ENV TZ=Asia/Shanghai
 
-# Note: GCC for InsightFace;
-#       FFmpeg for video (pip[imageio-ffmpeg] will use system FFmpeg instead of bundled).
-# Note: CMake may use different version of Python. Using 'update-alternatives' to ensure default version.
-RUN --mount=type=cache,target=/var/cache/zypp \
-    set -eu \
-    && zypper addrepo --check --refresh --priority 90 \
-        'https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/Essentials/' packman-essentials \
-    && zypper --gpg-auto-import-keys \
-            install --no-confirm \
-        python311 python311-pip python311-wheel python311-setuptools \
-        python311-devel python311-Cython gcc-c++ python311-py-build-cmake \
-        python311-numpy python311-opencv \
-        python311-ffmpeg-python ffmpeg x264 x265 \
-        python311-dbm \
-        google-noto-sans-fonts google-noto-sans-cjk-fonts google-noto-coloremoji-fonts \
-        shadow git aria2 \
-        Mesa-libGL1 libgthread-2_0-0 \
-    && rm /usr/lib64/python3.11/EXTERNALLY-MANAGED \
-    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 100
+RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y --no-install-recommends \
+        software-properties-common \
+        g++ make curl libopencv-dev ffmpeg libx264-dev libx265-dev \
+        libglib2.0-0 \
+        git aria2 \
+        mesa-utils \
+        fonts-noto-cjk fonts-noto-color-emoji
 
+# 添加 Python 3.11 的 PPA 并安装 Python 3.11
+RUN add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && apt-get install -y --no-install-recommends \
+        python3.11 python3.11-dev python3.11-venv python3.11-distutils && \
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 100 && \
+    rm -rf /var/lib/apt/lists/*
+
+# 使用缓存的 PIP 目录并升级 PIP
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --break-system-packages \
-        --upgrade pip wheel setuptools
+    pip3.11 install --upgrade pip wheel setuptools
 
-# Install xFormers (stable version, will specify PyTorch version),
-# and Torchvision + Torchaudio (will downgrade to match xFormers' PyTorch version).
+# 安装 xFormers、Torchvision 和 Torchaudio
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --break-system-packages \
+    pip3.11 install \
         xformers torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/cu121 \
         --extra-index-url https://pypi.org/simple
 
-# Dependencies for frequently-used
-# (Do this firstly so PIP won't be solving too many deps at one time)
+# 安装常用依赖
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --break-system-packages \
+    pip3.11 install \
         -r https://raw.githubusercontent.com/comfyanonymous/ComfyUI/master/requirements.txt \
         -r https://raw.githubusercontent.com/crystian/ComfyUI-Crystools/main/requirements.txt \
         -r https://raw.githubusercontent.com/cubiq/ComfyUI_essentials/main/requirements.txt \
@@ -53,13 +51,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         -r https://raw.githubusercontent.com/ltdrdata/ComfyUI-Inspire-Pack/main/requirements.txt \
         -r https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/requirements.txt
 
-# Dependencies for more, with few hand-pick:
-# 'cupy-cuda12x' for Frame Interpolation
-# 'compel lark' for smZNodes
-# 'torchdiffeq' for DepthFM
-# 'fairscale' for APISR
+# 安装其他依赖
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --break-system-packages \
+    pip3.11 install \
         -r https://raw.githubusercontent.com/cubiq/ComfyUI_FaceAnalysis/main/requirements.txt \
         -r https://raw.githubusercontent.com/cubiq/ComfyUI_InstantID/main/requirements.txt \
         -r https://raw.githubusercontent.com/Fannovel16/ComfyUI-Frame-Interpolation/main/requirements-no-cupy.txt \
@@ -73,18 +67,23 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         compel lark torchdiffeq fairscale \
         python-ffmpeg
 
-# 1. Fix ONNX Runtime "missing CUDA provider". Also add support for CUDA 12.1.
-#    Ref: https://onnxruntime.ai/docs/install/
-# 2. Fix MediaPipe's broken dep (protobuf<4).
+# 修复 ONNX Runtime 的 CUDA 支持和 MediaPipe 的依赖问题
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip uninstall --break-system-packages --yes \
-        onnxruntime-gpu \
-    && pip --no-cache-dir install --break-system-packages \
+    pip3.11 uninstall --yes \
+        onnxruntime-gpu && \
+    pip3.11 install --no-cache-dir \
         onnxruntime-gpu \
         --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ \
-        --extra-index-url https://pypi.org/simple \
-    && pip install --break-system-packages \
+        --extra-index-url https://pypi.org/simple && \
+    pip3.11 install \
         mediapipe
+
+# 设置时区为 Asia/Shanghai 并安装和配置 locales
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+ENV TZ=Asia/Shanghai
+
+ENV TZ=Asia/Shanghai
+ENV LANG=zh_CN.UTF-8
 
 # Fix for libs (.so files)
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
@@ -106,17 +105,19 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
 :/usr/local/lib/python3.11/site-packages/nvidia/nvtx/lib"
 
 # Create a low-privilege user
-RUN printf 'CREATE_MAIL_SPOOL=no' >> /etc/default/useradd \
-    && mkdir -p /home/runner /home/scripts \
-    && groupadd runner \
-    && useradd runner -g runner -d /home/runner \
-    && chown runner:runner /home/runner /home/scripts
+RUN mkdir /var/run/sshd && \
+    echo "root:123456" | chpasswd && \
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "source /etc/profile" >> /root/.bashrc && \
+    echo "source /etc/matrixdc-motd" >> /root/.bashrc
 
 COPY . .
 
 USER runner:runner
 VOLUME /home/runner
 WORKDIR /home/runner
-EXPOSE 8188
+EXPOSE 22
 ENV CLI_ARGS=""
-CMD ["bash","/home/scripts/entrypoint.sh"]
+# 启动服务
+CMD ["bash", "/home/scripts/start.sh"]
