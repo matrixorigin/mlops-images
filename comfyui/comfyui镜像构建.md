@@ -1,16 +1,13 @@
-################################################################################
-# Dockerfile that builds 'yanwk/comfyui-boot:cu121'
-# A runtime environment for https://github.com/comfyanonymous/ComfyUI
-# Using CUDA 12.1 & Python 3.11
-################################################################################
+```dockerfile
+# 阶段1：基础镜像 + SSH及登录提示 + CST时区 + 中文支持
 ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE}
-
-# 使用APT来安装软件包并缓存
+# 设置时区并配置本地化
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 ENV TZ=Asia/Shanghai
 
+# 使用缓存安装所需的软件包
 RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists \
     apt-get update && apt-get install -y --no-install-recommends \
         software-properties-common \
@@ -28,7 +25,7 @@ RUN add-apt-repository ppa:deadsnakes/ppa && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 100 && \
     rm -rf /var/lib/apt/lists/*
 
-# 使用缓存的 PIP 目录并升级 PIP
+# 使用缓存目录升级 pip
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip3.11 install --upgrade pip wheel setuptools
 
@@ -79,14 +76,12 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip3.11 install \
         mediapipe
 
-# 设置时区为 Asia/Shanghai 并安装和配置 locales
+# 再次设置时区和语言环境为中文
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-ENV TZ=Asia/Shanghai
-
 ENV TZ=Asia/Shanghai
 ENV LANG=zh_CN.UTF-8
 
-# Fix for libs (.so files)
+# 修复库路径问题
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
 :/usr/local/lib64/python3.11/site-packages/torch/lib\
 :/usr/local/lib/python3.11/site-packages/nvidia/cuda_cupti/lib\
@@ -94,18 +89,7 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
 :/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib\
 :/usr/local/lib/python3.11/site-packages/nvidia/cufft/lib"
 
-# More libs (not necessary, just in case)
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
-:/usr/local/lib/python3.11/site-packages/nvidia/cublas/lib\
-:/usr/local/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib\
-:/usr/local/lib/python3.11/site-packages/nvidia/curand/lib\
-:/usr/local/lib/python3.11/site-packages/nvidia/cusolver/lib\
-:/usr/local/lib/python3.11/site-packages/nvidia/cusparse/lib\
-:/usr/local/lib/python3.11/site-packages/nvidia/nccl/lib\
-:/usr/local/lib/python3.11/site-packages/nvidia/nvjitlink/lib\
-:/usr/local/lib/python3.11/site-packages/nvidia/nvtx/lib"
-
-# Create a low-privilege user
+# 创建低权限用户
 RUN mkdir /var/run/sshd && \
     echo "root:123456" | chpasswd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
@@ -113,14 +97,7 @@ RUN mkdir /var/run/sshd && \
     echo "source /etc/profile" >> /root/.bashrc && \
     echo "source /etc/matrixdc-motd" >> /root/.bashrc
 
-RUN mkdir -p /init/
-
-# 拷贝启动涉及到的文件
-COPY ./init/ /init/
-RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
-
-
-ENTRYPOINT ["bash", "/init/boot/boot.sh"]
+COPY . .
 
 USER runner:runner
 VOLUME /home/runner
@@ -128,4 +105,16 @@ WORKDIR /home/runner
 EXPOSE 22
 ENV CLI_ARGS=""
 # 启动服务
-CMD ["bash", "/home/scripts/start.sh"]
+CMD ["bash", "/init/boot/boot.sh"]
+
+
+
+#!/bin/bash
+# 使用构建好的镜像启动容器，映射 SSH 端口为 22
+docker run -d -ti \
+--restart=always \
+--name comfyui-boot \
+--gpus all \
+-p 2222:22 \
+comfyui-boot:cu121
+
