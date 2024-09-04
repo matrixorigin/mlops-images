@@ -1,0 +1,9 @@
+dlib
+insightface
+git+https://github.com/openai/CLIP.git
+
+# Gradio needs urllib3~=2.0,
+# but matrix-client(used by ComfyUI-Manager) needs urllib3~=1.21.
+# Have to give up Gradio here.
+#gradio
+#gradio-client
