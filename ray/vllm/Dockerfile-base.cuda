@@ -1,0 +1,17 @@
+ARG BASE_IMAGE
+
+FROM ${BASE_IMAGE}
+
+USER root
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git git-lfs && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# install vllm-cuda
+ARG VLLM_VERSION
+RUN pip --no-cache-dir install vllm==${VLLM_VERSION}
+
+USER ray
