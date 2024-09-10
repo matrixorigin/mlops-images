@@ -115,10 +115,10 @@ RUN mkdir /var/run/sshd && \
 
 RUN mkdir -p /init/
 
+EXPOSE 22 3000
 # 拷贝启动涉及到的文件
 COPY ./init/ /init/
 RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
-
 
 ENTRYPOINT ["bash", "/init/boot/boot.sh"]
 
