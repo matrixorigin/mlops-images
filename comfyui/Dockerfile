@@ -5,6 +5,8 @@
 ################################################################################
 ARG BASE_IMAGE
 
+ARG PIP_SOURCE=https://pypi.mirrors.ustc.edu.cn/simple
+
 FROM ${BASE_IMAGE}
 
 # 使用APT来安装软件包并缓存
@@ -35,13 +37,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # 安装 xFormers、Torchvision 和 Torchaudio
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip3.11 install \
-        xformers torchvision torchaudio \
-        --index-url https://download.pytorch.org/whl/cu121 \
-        --extra-index-url https://pypi.org/simple
+        xformers torchvision torchaudio -i https://pypi.mirrors.ustc.edu.cn/simple
 
 # 安装常用依赖
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip3.11 install \
+    pip3.11 install -i https://pypi.mirrors.ustc.edu.cn/simple \
         -r https://raw.githubusercontent.com/comfyanonymous/ComfyUI/master/requirements.txt \
         -r https://raw.githubusercontent.com/crystian/ComfyUI-Crystools/main/requirements.txt \
         -r https://raw.githubusercontent.com/cubiq/ComfyUI_essentials/main/requirements.txt \
@@ -52,31 +52,86 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         -r https://raw.githubusercontent.com/ltdrdata/ComfyUI-Inspire-Pack/main/requirements.txt \
         -r https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/requirements.txt
 
-# 安装其他依赖
+
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip3.11 install \
-        -r https://raw.githubusercontent.com/cubiq/ComfyUI_FaceAnalysis/main/requirements.txt \
-        -r https://raw.githubusercontent.com/cubiq/ComfyUI_InstantID/main/requirements.txt \
-        -r https://raw.githubusercontent.com/Fannovel16/ComfyUI-Frame-Interpolation/main/requirements-no-cupy.txt \
+    pip3.11 install -i https://pypi.mirrors.ustc.edu.cn/simple \
+        cmake \
+        onnxruntime \
+        insightface \
+        color_matcher \
+        onnxruntime-gpu \
+        torch \
+        numpy \
+        einops \
+        opencv-contrib-python \
+        kornia \
+        scipy \
+        Pillow \
+        torchvision \
+        tqdm \
+        pandas \
+        numexpr \
+        'pillow>=10.3.0' \
+        matplotlib \
+        huggingface_hub \
+        mss \
+        opencv-python \
+        'qrcode[pil]' \
+        requirements-parser \
+        rembg \
+        imageio_ffmpeg \
+        rich \
+        rich_argparse \
+        ninja \
+        PyGithub \
+        requests \
+        'nerfacc>=0.5.3' \
+        slangtorch \
+        'diffusers>=0.26.1' \
+        'transformers>=4.36.2' \
+        safetensors \
+        open_clip_torch \
+        torchmetrics \
+        pytorch_msssim \
+        pytorch-lightning \
+        trimesh \
+        plyfile \
+        pygltflib \
+        xatlas \
+        pymeshlab \
+        gpytoolbox \
+        PyMCubes \
+        torchtyping \
+        jaxtyping \
+        packaging \
+        OmegaConf \
+        pyhocon \
+        segment_anything \
+        timm \
+        addict \
+        yapf \
         cupy-cuda12x \
-        -r https://raw.githubusercontent.com/FizzleDorf/ComfyUI_FizzNodes/main/requirements.txt \
-        -r https://raw.githubusercontent.com/kijai/ComfyUI-KJNodes/main/requirements.txt \
-        -r https://raw.githubusercontent.com/melMass/comfy_mtb/main/requirements.txt \
-        -r https://raw.githubusercontent.com/MrForExample/ComfyUI-3D-Pack/main/requirements.txt \
-        -r https://raw.githubusercontent.com/storyicon/comfyui_segment_anything/main/requirements.txt \
-        -r https://raw.githubusercontent.com/ZHO-ZHO-ZHO/ComfyUI-InstantID/main/requirements.txt \
-        compel lark torchdiffeq fairscale \
-        python-ffmpeg
+        accelerate \
+        compel \
+        lark \
+        torchdiffeq \
+        fairscale \
+        python-ffmpeg \
+        boost
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip3.11 install -i https://mirrors.aliyun.com/pypi/simple dlib
+
 
 # 修复 ONNX Runtime 的 CUDA 支持和 MediaPipe 的依赖问题
-RUN --mount=type=cache,target=/root/.cache/pip \
+ RUN --mount=type=cache,target=/root/.cache/pip \
     pip3.11 uninstall --yes \
         onnxruntime-gpu && \
     pip3.11 install --no-cache-dir \
         onnxruntime-gpu \
         --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ \
         --extra-index-url https://pypi.org/simple && \
-    pip3.11 install \
+    pip3.11 install -i https://mirrors.aliyun.com/pypi/simple \
         mediapipe
 
 # 设置时区为 Asia/Shanghai 并安装和配置 locales
@@ -105,6 +160,8 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
 :/usr/local/lib/python3.11/site-packages/nvidia/nvjitlink/lib\
 :/usr/local/lib/python3.11/site-packages/nvidia/nvtx/lib"
 
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  openssh-server
 # Create a low-privilege user
 RUN mkdir /var/run/sshd && \
     echo "root:123456" | chpasswd && \
@@ -127,5 +184,6 @@ VOLUME /home/runner
 WORKDIR /home/runner
 EXPOSE 22
 ENV CLI_ARGS=""
+
 # 启动服务
 CMD ["bash", "/home/scripts/start.sh"]
