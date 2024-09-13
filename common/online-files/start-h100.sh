@@ -229,7 +229,7 @@ deb http://apt.tsinghua.mirrors.com/ubuntu/ jammy-backports main restricted univ
 EOF
 
     # 更新 apt 包列表
-    apt update
+    # apt update
 }
 
 
