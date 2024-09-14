@@ -205,8 +205,22 @@ function init_apt_source() {
         mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bak
     fi
 
-    apt update
+    # 检查sources.list.bak备份文件是否存在
+    if [ ! -e /etc/apt/sources.list.bak ]; then
+        # 如果 /etc/apt/sources.list 文件存在，则备份它
+        if [ -e /etc/apt/sources.list ]; then
+            cp -a /etc/apt/sources.list /etc/apt/sources.list.bak
+        fi
+    fi
+    # 写入新的 apt 源配置
+    cat <<EOF > /etc/apt/sources.list
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy main restricted universe multiverse
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-updates main restricted universe multiverse
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-backports main restricted universe multiverse
+EOF
 
+    # 更新 apt 包列表
+    # apt update
 }
 
 # 初始化 SSH 配置
