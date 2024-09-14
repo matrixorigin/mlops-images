@@ -77,17 +77,18 @@ RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
 EXPOSE 22 8888 6006 3000 11434
 # Set environment variable for Open WebUI
 ENV OLLAMA_BASE_URL=0.0.0.0:11434
-<<<<<<< Updated upstream
-=======
 # Let ollama serve at all IPs
 ENV OLLAMA_HOST=0.0.0.0
 ENV OLLAMA_MODELS=/root/data
->>>>>>> Stashed changes
 
 # supervisor配置文件放入ollama的启动命令
 RUN mkdir -p /etc/supervisord
 RUN echo "[program:ollama]" >> /etc/supervisord/supervisor-other.ini
 RUN echo "command=ollama serve" >> /etc/supervisord/supervisor-other.ini
 
+# Add WebUI service to supervisord
+RUN echo "[program:webui]" >> /etc/supervisord/supervisor-other.ini
+RUN echo "command=/bin/bash -c 'cd /app/backend && export PORT=3000 && ./start.sh'" >> /etc/supervisord/supervisor-other.ini
+RUN echo "directory=/app/backend" >> /etc/supervisord/supervisor-other.ini
 
 CMD ["bash", "/init/boot/boot.sh"]
