@@ -83,18 +83,18 @@ clone_or_pull https://github.com/cubiq/ComfyUI_essentials.git
 # WAS NS' deps were not fully installed, but it can still run, and have most features enabled
 # clone_or_pull https://github.com/WASasquatch/was-node-suite-comfyui.git
 
-echo "########################################"
-echo "[INFO] Downloading Models..."
-echo "########################################"
+# echo "########################################"
+# echo "[INFO] Downloading Models..."
+# echo "########################################"
 
 # Models
-cd /root/data/ComfyUI/models
-aria2c \
-  --input-file=/runner-scripts/download-models.txt \
-  --allow-overwrite=false \
-  --auto-file-renaming=false \
-  --continue=true \
-  --max-connection-per-server=5
+# cd /root/data/ComfyUI/models
+# aria2c \
+#   --input-file=/runner-scripts/download-models.txt \
+#   --allow-overwrite=false \
+#   --auto-file-renaming=false \
+#   --continue=true \
+#   --max-connection-per-server=5
 
 # Finish
 touch /root/data/.download-complete
