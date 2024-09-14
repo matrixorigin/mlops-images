@@ -9,13 +9,6 @@ ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE}
 
-# pip安装jupyterLab、tensorboard，tensorboard依赖的numpy版本需要小于2.0
-RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard && \
-    rm -r /root/.cache/pip
-
-# 暴露 JupyterLab、TensorBoard的端口
-EXPOSE 8888 6006
-
 # 使用APT来安装软件包并缓存
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 ENV TZ=Asia/Shanghai
@@ -41,6 +34,13 @@ RUN add-apt-repository ppa:deadsnakes/ppa && \
 # 使用缓存的 PIP 目录并升级 PIP
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip3.11 install --upgrade pip wheel setuptools
+
+# pip安装jupyterLab、tensorboard，tensorboard依赖的numpy版本需要小于2.0
+RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard && \
+    rm -r /root/.cache/pip
+
+# 暴露 JupyterLab、TensorBoard的端口
+EXPOSE 8888 6006
 
 # 安装 xFormers、Torchvision 和 Torchaudio
 RUN --mount=type=cache,target=/root/.cache/pip \
