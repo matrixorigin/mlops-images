@@ -1,6 +1,5 @@
 ARG BASE_IMAGE
 
-FROM ghcr.io/open-webui/open-webui AS open-webui
 FROM ollama/ollama AS ollama
 # Stage 2: Final image
 FROM ${BASE_IMAGE}
@@ -59,13 +58,8 @@ RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab
 
 COPY --from=ollama /usr/bin/ollama /usr/bin/ollama
 
-# Copy built WebUI from the builder stage
-# Copy the open-webui files from the open-webui stage
-COPY --from=open-webui /app /app
-WORKDIR /app
-RUN ls -al
-# Install WebUI backend dependencies
-RUN pip install -r ./backend/requirements.txt -U
+# Install web ui
+RUN pip install open-webui
 
 # 创建目录
 RUN mkdir -p /init/
@@ -83,12 +77,20 @@ ENV OLLAMA_MODELS=/root/data
 
 # supervisor配置文件放入ollama的启动命令
 RUN mkdir -p /etc/supervisord
+
+RUN echo "[supervisord]" > /etc/supervisord/supervisord.conf
+RUN echo "nodaemon=true" >> /etc/supervisord/supervisord.conf
+RUN echo "user=root" >> /etc/supervisord/supervisord.conf
+RUN echo "[include]" >> /etc/supervisord/supervisord.conf
+RUN echo "files = /etc/supervisord/*.ini" >> /etc/supervisord/supervisord.conf
+
 RUN echo "[program:ollama]" >> /etc/supervisord/supervisor-other.ini
 RUN echo "command=ollama serve" >> /etc/supervisord/supervisor-other.ini
 
 # Add WebUI service to supervisord
 RUN echo "[program:webui]" >> /etc/supervisord/supervisor-other.ini
-RUN echo "command=/bin/bash -c 'cd /app/backend && export PORT=3000 && ./start.sh'" >> /etc/supervisord/supervisor-other.ini
-RUN echo "directory=/app/backend" >> /etc/supervisord/supervisor-other.ini
+RUN echo "command=open-webui serve --port 3000" >> /etc/supervisord/supervisor-other.ini
 
-CMD ["bash", "/init/boot/boot.sh"]
+# CMD ["bash", "/init/boot/boot.sh"]
+# CMD ["tail", "-f", "/dev/null"]
+CMD ["/init/bin/supervisord", "-c", "/etc/supervisord/supervisord.conf"]

@@ -5,9 +5,9 @@
 # 例如：GPU的：nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04，仅支持CPU的：ubuntu22.04
 BASE_IMAGE=nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
 
-PYTHON_VERSION=3.10
+PYTHON_VERSION=3.11
 # miniconda的安装包均放在：https://repo.anaconda.com/miniconda/。根据要安装的python版本、操作系统，选择对应的miniconda安装包。
-MINICONDA_PKG=Miniconda3-py310_24.5.0-0-Linux-x86_64.sh
+MINICONDA_PKG=Miniconda3-py311_24.7.1-0-Linux-x86_64.sh
 
 # 构建后的镜像tag，需要体现pytorch、python、基础镜像版本信息
 IMAGE_TAG=python${PYTHON_VERSION}-cuda12.1.0-cudnn8-devel-ubuntu22.04
