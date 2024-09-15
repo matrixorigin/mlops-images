@@ -179,8 +179,6 @@ COPY ./runner-scripts/ /runner-scripts/
 WORKDIR /root/data
 # ENV CLI_ARGS=""
 
-RUN mkdir -p /etc/supervisord
-RUN echo "[program:comfyui]" >> /etc/supervisord/supervisor-other.ini
-RUN echo "command=bash /runner-scripts/start-comfy.sh" >> /etc/supervisord/supervisor-other.ini
+RUN chmod 755 /runner-scripts/*.sh
 
-CMD ["bash", "/init/boot/boot.sh"]
+CMD ["bash", "/runner-scripts/start-comfy.sh"]
