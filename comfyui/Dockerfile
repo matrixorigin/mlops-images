@@ -181,4 +181,6 @@ WORKDIR /root/data
 
 RUN chmod 755 /runner-scripts/*.sh
 
-CMD ["bash", "/runner-scripts/start-comfy.sh"]
+RUN bash /runner-scripts/build-comfy.sh
+
+CMD ["python3", "./ComfyUI/main.py", "--listen", "--port", "3000"]
