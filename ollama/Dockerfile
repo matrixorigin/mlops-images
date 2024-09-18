@@ -1,12 +1,11 @@
 ARG BASE_IMAGE
 
-FROM ghcr.io/open-webui/open-webui AS open-webui
 FROM ollama/ollama AS ollama
 # Stage 2: Final image
 FROM ${BASE_IMAGE}
 
 # 设置工作目录
-WORKDIR /root 
+WORKDIR /root
 
 ENV SHELL=/bin/bash
 ENV USER=root
@@ -59,13 +58,8 @@ RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab
 
 COPY --from=ollama /usr/bin/ollama /usr/bin/ollama
 
-# Copy built WebUI from the builder stage
-# Copy the open-webui files from the open-webui stage
-COPY --from=open-webui /app /app
-WORKDIR /app
-RUN ls -al
-# Install WebUI backend dependencies
-RUN pip install -r ./backend/requirements.txt -U
+# Install web ui
+RUN pip install open-webui
 
 # 创建目录
 RUN mkdir -p /init/
@@ -76,15 +70,26 @@ RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
 # 暴露 SSH、JupyterLab、TensorBoard, Ollama, WebUI的端口
 EXPOSE 22 8888 6006 3000 11434
 # Set environment variable for Open WebUI
-ENV OLLAMA_BASE_URL=0.0.0.0:11434
+ENV OLLAMA_BASE_URL=http://localhost:11434
 # Let ollama serve at all IPs
 ENV OLLAMA_HOST=0.0.0.0
 ENV OLLAMA_MODELS=/root/data
 
 # supervisor配置文件放入ollama的启动命令
 RUN mkdir -p /etc/supervisord
-RUN echo "[program:ollama]" >> /etc/supervisord/supervisor-other.ini
-RUN echo "command=ollama serve" >> /etc/supervisord/supervisor-other.ini
 
+RUN echo "[program:ollama]" >> /etc/supervisord/supervisor-other.ini && \
+    echo "command=ollama serve" >> /etc/supervisord/supervisor-other.ini && \
+    echo "stdout_logfile=/tmp/ollama.log" >> /etc/supervisord/supervisor-other.ini && \
+    echo "stderr_logfile=/tmp/ollama.log" >> /etc/supervisord/supervisor-other.ini && \
+    echo "priority=10" >> /etc/supervisord/supervisor-other.ini
+
+RUN echo "[program:webui]" >> /etc/supervisord/supervisor-other.ini && \
+    echo "command=open-webui serve --port 3000" >> /etc/supervisord/supervisor-other.ini && \
+    echo "autostart=true" >> /etc/supervisord/supervisor-other.ini && \
+    echo "autorestart=true" >> /etc/supervisord/supervisor-other.ini && \
+    echo "stderr_logfile=/tmp/open-webui.log" >> /etc/supervisord/supervisor-other.ini && \
+    echo "stdout_logfile=/tmp/open-webui.log" >> /etc/supervisord/supervisor-other.ini && \
+    echo "priority=20" >> /etc/supervisord/supervisor-other.ini
 
 CMD ["bash", "/init/boot/boot.sh"]
