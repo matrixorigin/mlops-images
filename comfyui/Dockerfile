@@ -183,4 +183,12 @@ RUN chmod 755 /runner-scripts/*.sh
 
 RUN bash /runner-scripts/build-comfy.sh
 
-CMD ["python3", "/root/data/ComfyUI/main.py", "--listen", "--port", "3000"]
+RUN mkdir -p /etc/supervisord
+RUN echo "[program:comfyui]" >> /etc/supervisord/supervisor-other.ini
+RUN echo "command=python3 /root/data/ComfyUI/main.py --listen --port 3000" >> /etc/supervisord/supervisor-other.ini
+RUN echo "autostart=true" >> /etc/supervisord/supervisor-other.ini
+RUN echo "autorestart=true" >> /etc/supervisord/supervisor-other.ini
+RUN echo "stderr_logfile=/var/log/comfyui.err.log" >> /etc/supervisord/supervisor-other.ini
+RUN echo "stdout_logfile=/var/log/comfyui.out.log" >> /etc/supervisord/supervisor-other.ini
+
+CMD ["bash", "/init/boot/boot.sh"]
