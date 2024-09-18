@@ -183,4 +183,4 @@ RUN chmod 755 /runner-scripts/*.sh
 
 RUN bash /runner-scripts/build-comfy.sh
 
-CMD ["python3", "./ComfyUI/main.py", "--listen", "--port", "3000"]
+CMD ["python3", "/root/data/ComfyUI/main.py", "--listen", "--port", "3000"]
