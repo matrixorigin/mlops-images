@@ -176,7 +176,9 @@ RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
 #ENTRYPOINT ["bash", "/init/boot/boot.sh"]
 RUN mkdir -p /runner-scripts/
 COPY ./runner-scripts/ /runner-scripts/
-WORKDIR /root/data
+
+RUN mkdir -p /comfyui
+WORKDIR /comfyui
 # ENV CLI_ARGS=""
 
 RUN chmod 755 /runner-scripts/*.sh
@@ -185,7 +187,7 @@ RUN bash /runner-scripts/build-comfy.sh
 
 RUN mkdir -p /etc/supervisord
 RUN echo "[program:comfyui]" >> /etc/supervisord/supervisor-other.ini
-RUN echo "command=python3 /root/data/ComfyUI/main.py --listen --port 3000" >> /etc/supervisord/supervisor-other.ini
+RUN echo "command=python3 /comfyui/ComfyUI/main.py --listen --port 3000" >> /etc/supervisord/supervisor-other.ini
 RUN echo "autostart=true" >> /etc/supervisord/supervisor-other.ini
 RUN echo "autorestart=true" >> /etc/supervisord/supervisor-other.ini
 RUN echo "stderr_logfile=/var/log/comfyui.err.log" >> /etc/supervisord/supervisor-other.ini

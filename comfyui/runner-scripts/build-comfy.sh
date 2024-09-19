@@ -3,34 +3,34 @@
 set -e
 
 # Run user's set-proxy script
-cd /root/data
-if [ ! -f "/root/data/user-scripts/set-proxy.sh" ] ; then
-    mkdir -p /root/data/user-scripts
-    cp /runner-scripts/set-proxy.sh.example /root/data/user-scripts/set-proxy.sh
+cd /comfyui
+if [ ! -f "/comfyui/user-scripts/set-proxy.sh" ] ; then
+    mkdir -p /comfyui/user-scripts
+    cp /runner-scripts/set-proxy.sh.example /comfyui/user-scripts/set-proxy.sh
 else
     echo "[INFO] Running set-proxy script..."
 
-    chmod +x /root/data/user-scripts/set-proxy.sh
-    source /root/data/user-scripts/set-proxy.sh
+    chmod +x /comfyui/user-scripts/set-proxy.sh
+    source /comfyui/user-scripts/set-proxy.sh
 fi ;
 
 # Install ComfyUI
-cd /root/data
-if [ ! -f "/root/data/.download-complete" ] ; then
+cd /comfyui
+if [ ! -f "/comfyui/.download-complete" ] ; then
     chmod +x /runner-scripts/download.sh
     bash /runner-scripts/download.sh
 fi ;
 
 # Run user's pre-start script
-cd /root/data
-if [ ! -f "/root/data/user-scripts/pre-start.sh" ] ; then
-    mkdir -p /root/data/user-scripts
-    cp /runner-scripts/pre-start.sh.example /root/data/user-scripts/pre-start.sh
+cd /comfyui
+if [ ! -f "/comfyui/user-scripts/pre-start.sh" ] ; then
+    mkdir -p /comfyui/user-scripts
+    cp /runner-scripts/pre-start.sh.example /comfyui/user-scripts/pre-start.sh
 else
     echo "[INFO] Running pre-start script..."
 
-    chmod +x /root/data/user-scripts/pre-start.sh
-    source /root/data/user-scripts/pre-start.sh
+    chmod +x /comfyui/user-scripts/pre-start.sh
+    source /comfyui/user-scripts/pre-start.sh
 fi ;
 
 
@@ -39,14 +39,12 @@ echo "[INFO] Starting ComfyUI..."
 echo "########################################"
 
 # Let .pyc files be stored in one place
-export PYTHONPYCACHEPREFIX="/root/data/.cache/pycache"
-# Let PIP install packages to /root/data/.local
+export PYTHONPYCACHEPREFIX="/comfyui/.cache/pycache"
+# Let PIP install packages to /comfyui/.local
 export PIP_USER=true
 # Add above to PATH
-export PATH="${PATH}:/root/data/.local/bin"
+export PATH="${PATH}:/comfyui/.local/bin"
 # Suppress [WARNING: Running pip as the 'root' user]
 export PIP_ROOT_USER_ACTION=ignore
 
-cd /root/data
 
-python3 ./ComfyUI/main.py --listen --port 3000 ${CLI_ARGS}
