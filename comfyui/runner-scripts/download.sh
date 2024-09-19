@@ -24,10 +24,10 @@ echo "########################################"
 echo "[INFO] Downloading ComfyUI & Manager..."
 echo "########################################"
 
-cd /root/data
+cd /comfyui
 clone_or_pull https://github.com/comfyanonymous/ComfyUI.git
 
-cd /root/data/ComfyUI/custom_nodes
+cd /comfyui/ComfyUI/custom_nodes
 clone_or_pull https://github.com/ltdrdata/ComfyUI-Manager.git
 
 
@@ -35,7 +35,7 @@ echo "########################################"
 echo "[INFO] Downloading Custom Nodes..."
 echo "########################################"
 
-cd /root/data/ComfyUI/custom_nodes
+cd /comfyui/ComfyUI/custom_nodes
 
 # Workspace
 # clone_or_pull https://github.com/11cafe/comfyui-workspace-manager.git
@@ -88,7 +88,7 @@ clone_or_pull https://github.com/cubiq/ComfyUI_essentials.git
 # echo "########################################"
 
 # Models
-# cd /root/data/ComfyUI/models
+# cd /comfyui/ComfyUI/models
 # aria2c \
 #   --input-file=/runner-scripts/download-models.txt \
 #   --allow-overwrite=false \
@@ -97,4 +97,4 @@ clone_or_pull https://github.com/cubiq/ComfyUI_essentials.git
 #   --max-connection-per-server=5
 
 # Finish
-touch /root/data/.download-complete
+touch /comfyui/.download-complete
