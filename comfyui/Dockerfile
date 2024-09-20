@@ -12,13 +12,14 @@ FROM ${BASE_IMAGE}
 # Set environment variables
 ENV TZ=Asia/Shanghai
 ENV LANG=zh_CN.UTF-8
+ENV DEBIAN_FRONTEND=noninteractive
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Install system dependencies
 RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists \
     apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common g++ make curl libopencv-dev ffmpeg libx264-dev libx265-dev \
     libglib2.0-0 git aria2 mesa-utils fonts-noto-cjk fonts-noto-color-emoji openssh-server && \
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && apt-get install -y --no-install-recommends \
     python3.11 python3.11-dev python3.11-venv python3.11-distutils && \
