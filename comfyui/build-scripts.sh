@@ -1,10 +1,10 @@
 #!/bin/sh
 
 # 设置基础镜像
-BASE_IMAGE=nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+BASE_IMAGE=nvidia/cuda:12.1.0-runtime-ubuntu22.04
 # 构建后的镜像 tag
 
-IMAGE_TAG=comfyui-cuda:12.1.0-cudnn8-devel-ubuntu22.04
+IMAGE_TAG=comfyui-cuda:12.1.0-runtime-ubuntu22.04
 
 # 复制init 文件
 cp -r ../common/init ./init

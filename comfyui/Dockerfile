@@ -3,10 +3,10 @@
 # A runtime environment for https://github.com/comfyanonymous/ComfyUI
 # Using CUDA 12.1 & Python 3.11
 ################################################################################
-ARG BASE_IMAGE
+ARG nvidia/cuda:12.1.0-runtime-ubuntu22.04
 ARG PIP_SOURCE=https://pypi.mirrors.ustc.edu.cn/simple
 
-FROM ${BASE_IMAGE}
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
 # Set environment variables
 ENV TZ=Asia/Shanghai
