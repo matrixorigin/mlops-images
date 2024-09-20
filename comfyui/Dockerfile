@@ -177,6 +177,7 @@ RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
 RUN mkdir -p /runner-scripts/
 COPY ./runner-scripts/ /runner-scripts/
 
+ENV HF_ENDPOINT=https://hf-mirror.com
 RUN mkdir -p /comfyui
 WORKDIR /comfyui
 # ENV CLI_ARGS=""
