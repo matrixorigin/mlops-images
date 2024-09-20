@@ -1,21 +1,10 @@
 ARG BASE_IMAGE
 
-<<<<<<< HEAD
-# Ollama stage
-=======
->>>>>>> feat-comfyui-mega-reduce-size
-FROM ollama/ollama AS ollama
-
 # Stage 2: Final image
 FROM ${BASE_IMAGE}
 
-<<<<<<< HEAD
 # Set working directory
 WORKDIR /root 
-=======
-# 设置工作目录
-WORKDIR /root
->>>>>>> feat-comfyui-mega-reduce-size
 
 ENV SHELL=/bin/bash
 ENV USER=root
@@ -66,15 +55,21 @@ RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/${MINICOND
 # Install Python packages
 RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard
 
-# Copy Ollama binary
-COPY --from=ollama /usr/bin/ollama /usr/bin/ollama
+# Install Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
 
 # Install web ui
-RUN pip install open-webui
+RUN git clone https://github.com/open-webui/open-webui.git && \
+  cd open-webui/ && \
+  cp -RPp .env.example .env && \
+  npm install && \
+  npm run build && \
+  cd ./backend && \
+  pip install -r requirements.txt -U
 
-# Copy init files
-COPY ./init/ /init/
-RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
+# Copy start script
+COPY start.sh /root/open-webui/backend/start.sh
+RUN chmod +x /root/open-webui/backend/start.sh
 
 # Expose ports
 EXPOSE 22 8888 6006 3000 11434
@@ -95,7 +90,7 @@ RUN mkdir -p /etc/supervisord && \
   echo "[program:ollama]" > /etc/supervisord/supervisor-other.ini && \
   echo "command=ollama serve" >> /etc/supervisord/supervisor-other.ini && \
   echo "[program:webui]" >> /etc/supervisord/supervisor-other.ini && \
-  echo "command=open-webui serve --port 3000" >> /etc/supervisord/supervisor-other.ini
+  echo "command=bash /root/open-webui/backend/start.sh" >> /etc/supervisord/supervisor-other.ini
 
 # Set entrypoint (unchanged from your original)
 CMD ["bash", "/init/boot/boot.sh"]
