@@ -4,8 +4,7 @@
 # Using CUDA 12.1 & Python 3.11
 ################################################################################
 ARG BASE_IMAGE
-
-#ARG PIP_SOURCE=https://pypi.mirrors.ustc.edu.cn/simple
+ARG PIP_SOURCE=https://pypi.mirrors.ustc.edu.cn/simple
 
 FROM ${BASE_IMAGE}
 
