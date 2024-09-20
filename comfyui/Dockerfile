@@ -9,44 +9,30 @@ ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE}
 
-# 使用APT来安装软件包并缓存
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# Set environment variables
 ENV TZ=Asia/Shanghai
 ENV LANG=zh_CN.UTF-8
 
+# Install system dependencies
 RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt/lists \
     apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    g++ make curl libopencv-dev ffmpeg libx264-dev libx265-dev \
-    libglib2.0-0 \
-    git aria2 \
-    mesa-utils \
-    fonts-noto-cjk fonts-noto-color-emoji
-
-# 添加 Python 3.11 的 PPA 并安装 Python 3.11
-RUN add-apt-repository ppa:deadsnakes/ppa && \
+    software-properties-common g++ make curl libopencv-dev ffmpeg libx264-dev libx265-dev \
+    libglib2.0-0 git aria2 mesa-utils fonts-noto-cjk fonts-noto-color-emoji openssh-server && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+    add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && apt-get install -y --no-install-recommends \
     python3.11 python3.11-dev python3.11-venv python3.11-distutils && \
     curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 100 && \
     rm -rf /var/lib/apt/lists/*
 
-# 使用缓存的 PIP 目录并升级 PIP
+# Set up Python environment
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip3.11 install --upgrade pip wheel setuptools
+    pip3.11 install --upgrade pip wheel setuptools && \
+    pip3.11 install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard \
+    xformers torchvision torchaudio
 
-# pip安装jupyterLab、tensorboard，tensorboard依赖的numpy版本需要小于2.0
-RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard && \
-    rm -r /root/.cache/pip
-
-# 暴露 JupyterLab、TensorBoard的端口
-EXPOSE 8888 6006
-
-# 安装 xFormers、Torchvision 和 Torchaudio
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip3.11 install xformers torchvision torchaudio
-
-# 安装常用依赖
+# Install ComfyUI and other Python dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip3.11 install -r https://raw.githubusercontent.com/comfyanonymous/ComfyUI/master/requirements.txt \
     -r https://raw.githubusercontent.com/crystian/ComfyUI-Crystools/main/requirements.txt \
@@ -58,107 +44,27 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     -r https://raw.githubusercontent.com/ltdrdata/ComfyUI-Inspire-Pack/main/requirements.txt \
     -r https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/requirements.txt
 
-
+# Install additional Python packages
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip3.11 install \
-    cmake \
-    onnxruntime \
-    insightface \
-    color_matcher \
-    onnxruntime-gpu \
-    torch \
-    numpy \
-    einops \
-    opencv-contrib-python \
-    kornia \
-    scipy \
-    Pillow \
-    torchvision \
-    tqdm \
-    pandas \
-    numexpr \
-    'pillow>=10.3.0' \
-    matplotlib \
-    huggingface_hub \
-    mss \
-    opencv-python \
-    'qrcode[pil]' \
-    requirements-parser \
-    rembg \
-    imageio_ffmpeg \
-    rich \
-    rich_argparse \
-    ninja \
-    PyGithub \
-    requests \
-    'nerfacc>=0.5.3' \
-    slangtorch \
-    'diffusers>=0.26.1' \
-    'transformers>=4.36.2' \
-    safetensors \
-    open_clip_torch \
-    torchmetrics \
-    pytorch_msssim \
-    pytorch-lightning \
-    trimesh \
-    plyfile \
-    pygltflib \
-    xatlas \
-    pymeshlab \
-    gpytoolbox \
-    PyMCubes \
-    torchtyping \
-    jaxtyping \
-    packaging \
-    OmegaConf \
-    pyhocon \
-    segment_anything \
-    timm \
-    addict \
-    yapf \
-    cupy-cuda12x \
-    accelerate \
-    compel \
-    lark \
-    torchdiffeq \
-    fairscale \
-    python-ffmpeg \
-    boost
+    pip3.11 install cmake onnxruntime insightface color_matcher onnxruntime-gpu torch numpy einops \
+    opencv-contrib-python kornia scipy Pillow torchvision tqdm pandas numexpr 'pillow>=10.3.0' \
+    matplotlib huggingface_hub mss opencv-python 'qrcode[pil]' requirements-parser rembg \
+    imageio_ffmpeg rich rich_argparse ninja PyGithub requests 'nerfacc>=0.5.3' slangtorch \
+    'diffusers>=0.26.1' 'transformers>=4.36.2' safetensors open_clip_torch torchmetrics \
+    pytorch_msssim pytorch-lightning trimesh plyfile pygltflib xatlas pymeshlab gpytoolbox \
+    PyMCubes torchtyping jaxtyping packaging OmegaConf pyhocon segment_anything timm addict \
+    yapf cupy-cuda12x accelerate compel lark torchdiffeq fairscale python-ffmpeg boost dlib
 
+# Fix ONNX Runtime and MediaPipe
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip3.11 install  dlib
-
-
-# 修复 ONNX Runtime 的 CUDA 支持和 MediaPipe 的依赖问题
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip3.11 uninstall --yes \
-    onnxruntime-gpu && \
+    pip3.11 uninstall --yes onnxruntime-gpu && \
     pip3.11 install --no-cache-dir onnxruntime-gpu --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ \
     --extra-index-url https://pypi.org/simple && pip3.11 install mediapipe
 
-# Fix for libs (.so files)
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
-    :/usr/local/lib64/python3.11/site-packages/torch/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/cuda_cupti/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/cuda_runtime/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/cufft/lib"
+# Set up library paths
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib64/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cuda_cupti/lib:/usr/local/lib/python3.11/site-packages/nvidia/cuda_runtime/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib:/usr/local/lib/python3.11/site-packages/nvidia/cufft/lib:/usr/local/lib/python3.11/site-packages/nvidia/cublas/lib:/usr/local/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib:/usr/local/lib/python3.11/site-packages/nvidia/curand/lib:/usr/local/lib/python3.11/site-packages/nvidia/cusolver/lib:/usr/local/lib/python3.11/site-packages/nvidia/cusparse/lib:/usr/local/lib/python3.11/site-packages/nvidia/nccl/lib:/usr/local/lib/python3.11/site-packages/nvidia/nvjitlink/lib:/usr/local/lib/python3.11/site-packages/nvidia/nvtx/lib"
 
-# More libs (not necessary, just in case)
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
-    :/usr/local/lib/python3.11/site-packages/nvidia/cublas/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/curand/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/cusolver/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/cusparse/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/nccl/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/nvjitlink/lib\
-    :/usr/local/lib/python3.11/site-packages/nvidia/nvtx/lib"
-
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    openssh-server
-
-# Create a low-privilege user
+# Set up SSH and other configurations
 RUN mkdir /var/run/sshd && \
     echo "root:123456" | chpasswd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
@@ -166,32 +72,28 @@ RUN mkdir /var/run/sshd && \
     echo "source /etc/profile" >> /root/.bashrc && \
     echo "source /etc/matrixdc-motd" >> /root/.bashrc
 
-RUN mkdir -p /init/
-
-EXPOSE 22 3000
-# 拷贝启动涉及到的文件
+# Create necessary directories and copy files
+RUN mkdir -p /init/ /runner-scripts/ /comfyui /etc/supervisord
 COPY ./init/ /init/
-RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
-
-#ENTRYPOINT ["bash", "/init/boot/boot.sh"]
-RUN mkdir -p /runner-scripts/
 COPY ./runner-scripts/ /runner-scripts/
+RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/* && \
+    chmod 755 /runner-scripts/*.sh
 
+# Set up ComfyUI
 ENV HF_ENDPOINT=https://hf-mirror.com
-RUN mkdir -p /comfyui
 WORKDIR /comfyui
-# ENV CLI_ARGS=""
-
-RUN chmod 755 /runner-scripts/*.sh
-
 RUN bash /runner-scripts/build-comfy.sh
 
-RUN mkdir -p /etc/supervisord
-RUN echo "[program:comfyui]" >> /etc/supervisord/supervisor-other.ini
-RUN echo "command=python3 /comfyui/ComfyUI/main.py --listen --port 3000" >> /etc/supervisord/supervisor-other.ini
-RUN echo "autostart=true" >> /etc/supervisord/supervisor-other.ini
-RUN echo "autorestart=true" >> /etc/supervisord/supervisor-other.ini
-RUN echo "stderr_logfile=/var/log/comfyui.err.log" >> /etc/supervisord/supervisor-other.ini
-RUN echo "stdout_logfile=/var/log/comfyui.out.log" >> /etc/supervisord/supervisor-other.ini
+# Set up supervisord for ComfyUI
+RUN echo "[program:comfyui]" >> /etc/supervisord/supervisor-other.ini && \
+    echo "command=python3 /comfyui/ComfyUI/main.py --listen --port 3000" >> /etc/supervisord/supervisor-other.ini && \
+    echo "autostart=true" >> /etc/supervisord/supervisor-other.ini && \
+    echo "autorestart=true" >> /etc/supervisord/supervisor-other.ini && \
+    echo "stderr_logfile=/var/log/comfyui.err.log" >> /etc/supervisord/supervisor-other.ini && \
+    echo "stdout_logfile=/var/log/comfyui.out.log" >> /etc/supervisord/supervisor-other.ini
 
+# Expose ports
+EXPOSE 22 3000 8888 6006
+
+# Set the entrypoint
 CMD ["bash", "/init/boot/boot.sh"]
