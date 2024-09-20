@@ -74,6 +74,7 @@ ENV OLLAMA_BASE_URL=0.0.0.0:11434
 # Let ollama serve at all IPs
 ENV OLLAMA_HOST=0.0.0.0
 ENV OLLAMA_MODELS=/root/data
+ENV HF_ENDPOINT=https://hf-mirror.com
 
 # supervisor配置文件放入ollama的启动命令
 RUN mkdir -p /etc/supervisord
