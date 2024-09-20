@@ -1,5 +1,8 @@
 ARG BASE_IMAGE
 
+# Ollama stage
+FROM ollama/ollama AS ollama
+
 # Stage 1: Build stage
 FROM ${BASE_IMAGE} AS builder
 
