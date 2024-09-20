@@ -1,13 +1,21 @@
 ARG BASE_IMAGE
 
+<<<<<<< HEAD
 # Ollama stage
+=======
+>>>>>>> feat-comfyui-mega-reduce-size
 FROM ollama/ollama AS ollama
 
 # Stage 2: Final image
 FROM ${BASE_IMAGE}
 
+<<<<<<< HEAD
 # Set working directory
 WORKDIR /root 
+=======
+# 设置工作目录
+WORKDIR /root
+>>>>>>> feat-comfyui-mega-reduce-size
 
 ENV SHELL=/bin/bash
 ENV USER=root
