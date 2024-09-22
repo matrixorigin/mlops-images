@@ -1,9 +1,5 @@
 ARG BASE_IMAGE
 
-# Ollama stage
-FROM ollama/ollama AS ollama
-
-# Stage 2: Final image
 FROM ${BASE_IMAGE}
 
 # Set working directory
@@ -58,8 +54,8 @@ RUN curl -o /tmp/miniconda.sh -LO https://repo.anaconda.com/miniconda/${MINICOND
 # Install Python packages
 RUN pip install 'numpy<2.0' jupyterlab jupyterlab-language-pack-zh-CN jupyterlab_pygments tensorboard
 
-# Copy Ollama binary
-COPY --from=ollama /usr/bin/ollama /usr/bin/ollama
+# Install Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
 
 # Install web ui
 RUN pip install open-webui
@@ -79,13 +75,8 @@ ENV HF_ENDPOINT=https://hf-mirror.com
 
 # Configure supervisord
 RUN mkdir -p /etc/supervisord && \
-  echo "[supervisord]" > /etc/supervisord/supervisord.conf && \
-  echo "nodaemon=true" >> /etc/supervisord/supervisord.conf && \
-  echo "user=root" >> /etc/supervisord/supervisord.conf && \
-  echo "[include]" >> /etc/supervisord/supervisord.conf && \
-  echo "files = /etc/supervisord/*.ini" >> /etc/supervisord/supervisord.conf && \
   echo "[program:ollama]" > /etc/supervisord/supervisor-other.ini && \
-  echo "command=ollama serve" >> /etc/supervisord/supervisor-other.ini && \
+  echo "command=/usr/local/bin/ollama serve" >> /etc/supervisord/supervisor-other.ini && \
   echo "[program:webui]" >> /etc/supervisord/supervisor-other.ini && \
   echo "command=open-webui serve --port 3000" >> /etc/supervisord/supervisor-other.ini
 
