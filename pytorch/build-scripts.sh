@@ -12,6 +12,8 @@ MINICONDA_PKG=Miniconda3-py38_23.11.0-2-Linux-x86_64.sh
 
 #根据官方对应pytorch pip安装命令中指定https://pytorch.org/get-started/previous-versions/，国外源地址下载较慢，有需要的话可以考虑换成国内源，但是有些国内源不全，不一定有对应版本
 # PYTORCH参数
+# PYTORCH_LATEST=True时，表示安装最新版本，安装最新版本时，也需要指定PYTORCH_VERSION，因为镜像名称有引用它。非True时表示安装指定版本
+PYTORCH_LATEST=False
 PYTORCH_VERSION=2.3.0
 PYTORCH_VERSION_SUFFIX=
 TORCHVISION_VERSION=0.18.0
@@ -23,10 +25,14 @@ PYTORCH_DOWNLOAD_URL=https://download.pytorch.org/whl/cu121
 # 构建后的镜像tag，需要体现pytorch、python、基础镜像版本信息
 IMAGE_TAG=${PYTORCH_VERSION}-python${PYTHON_VERSION}-cuda12.1.0-cudnn8-devel-ubuntu22.04
 
+# copy init文件到当前目录
+cp  -r ../common/init ./init
+
 docker build \
     --build-arg BASE_IMAGE=${BASE_IMAGE} \
     --build-arg PYTHON_VERSION=${PYTHON_VERSION} \
     --build-arg MINICONDA_PKG=${MINICONDA_PKG} \
+    --build-arg PYTORCH_LATEST=${PYTORCH_LATEST} \
     --build-arg PYTORCH_VERSION=${PYTORCH_VERSION} \
     --build-arg PYTORCH_VERSION_SUFFIX=${PYTORCH_VERSION_SUFFIX} \
     --build-arg TORCHVISION_VERSION=${TORCHVISION_VERSION} \
