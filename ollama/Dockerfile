@@ -68,17 +68,36 @@ RUN chmod 755 /init/boot/*.sh && chmod 755 /init/bin/*
 EXPOSE 22 8888 6006 3000 11434
 
 # Set environment variables
-ENV OLLAMA_BASE_URL=0.0.0.0:11434
-ENV OLLAMA_HOST=0.0.0.0
+ENV OLLAMA_BASE_URL=http://127.0.0.1:11435
+ENV OLLAMA_HOST=0.0.0.0:11435
 ENV OLLAMA_MODELS=/root/data
 ENV HF_ENDPOINT=https://hf-mirror.com
 
+RUN echo "export OLLAMA_HOST=0.0.0.0:11435" >> /etc/profile
+# due to limitation with ingress proxy with nginx
+RUN apt-get --allow-unauthenticated update && apt-get install -y nginx
+
+COPY ./ollama-nginx.conf /etc/nginx/conf.d/default.conf
+RUN sed -i 's/worker_processes auto;/worker_processes 2;/' /etc/nginx/nginx.conf
+
 # Configure supervisord
+RUN mkdir -p /tmp/log/ollama /tmp/log/open-webui /tmp/log/nginx
 RUN mkdir -p /etc/supervisord && \
   echo "[program:ollama]" > /etc/supervisord/supervisor-other.ini && \
   echo "command=/usr/local/bin/ollama serve" >> /etc/supervisord/supervisor-other.ini && \
+  echo "stdout_logfile=/tmp/log/ollama/ollama.log" >> /etc/supervisord/supervisor-other.ini && \
+  echo "stderr_logfile=/tmp/log/ollama/ollama.log" >> /etc/supervisord/supervisor-other.ini && \
+  echo "redirect_stderr=true" >> /etc/supervisord/supervisor-other.ini && \
   echo "[program:webui]" >> /etc/supervisord/supervisor-other.ini && \
-  echo "command=open-webui serve --port 3000" >> /etc/supervisord/supervisor-other.ini
+  echo "command=open-webui serve --port 3000" >> /etc/supervisord/supervisor-other.ini && \
+  echo "stdout_logfile=/tmp/log/open-webui/webui.log" >> /etc/supervisord/supervisor-other.ini && \
+  echo "stderr_logfile=/tmp/log/open-webui/webui.log" >> /etc/supervisord/supervisor-other.ini && \
+  echo "redirect_stderr=true" >> /etc/supervisord/supervisor-other.ini && \
+  echo "[program:nginx]" >> /etc/supervisord/supervisor-other.ini && \
+  echo "command=nginx -g 'daemon off;'" >> /etc/supervisord/supervisor-other.ini && \
+  echo "stdout_logfile=/tmp/log/nginx/nginx.log" >> /etc/supervisord/supervisor-other.ini && \
+  echo "stderr_logfile=/tmp/log/nginx/nginx.log" >> /etc/supervisord/supervisor-other.ini && \
+  echo "redirect_stderr=true" >> /etc/supervisord/supervisor-other.ini
 
 # Set entrypoint (unchanged from your original)
 CMD ["bash", "/init/boot/boot.sh"]

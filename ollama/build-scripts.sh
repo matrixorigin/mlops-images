@@ -10,8 +10,9 @@ PYTHON_VERSION=3.11
 # miniconda的安装包均放在：https://repo.anaconda.com/miniconda/。根据要安装的python版本、操作系统，选择对应的miniconda安装包。
 MINICONDA_PKG=Miniconda3-py311_24.7.1-0-Linux-x86_64.sh
 
+OLLAMA_VERSION=0.3.11
 # 构建后的镜像tag，需要体现pytorch、python、基础镜像版本信息
-IMAGE_TAG=python${PYTHON_VERSION}-cuda12.1.0-runtime-ubuntu22.04
+IMAGE_TAG=ollama${OLLAMA_VERSION}-python${PYTHON_VERSION}-cuda12.1.0-runtime-ubuntu22.04
 
 # 复制init 文件
 cp -r ../common/init ./init
