@@ -159,6 +159,7 @@ function init_profile() {
 
     if ! grep -Fxq "$hami_log_level" /etc/profile; then
         echo "$hami_log_level" >> /etc/profile
+        echo "export HF_ENDPOINT=https://hf.neolink-ai.com" >> /etc/profile
     fi
 }
 
