@@ -1,0 +1,35 @@
+ARG BASE_IMAGE
+
+FROM ${BASE_IMAGE}
+
+USER root
+
+# install vllm-cpu
+# https://docs.vllm.ai/en/latest/getting_started/cpu-installation.html
+ARG VLLM_VERSION
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends cmake gcc-12 g++-12 libnuma-dev && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10 --slave /usr/bin/g++ g++ /usr/bin/g++-12 && \
+    pip --no-cache-dir install "cmake>=3.26" wheel packaging ninja "setuptools-scm>=8" numpy && \
+    git clone https://github.com/vllm-project/vllm.git -b ${VLLM_VERSION} --depth 1 && \
+    git clone https://github.com/oneapi-src/oneDNN.git -b rls-v3.5 --depth 1 && \
+    pip install --no-cache-dir -v -r vllm/requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu && \
+    cmake -B ./oneDNN/build -S ./oneDNN -G Ninja -DONEDNN_LIBRARY_TYPE=STATIC \
+        -DONEDNN_BUILD_DOC=OFF \
+        -DONEDNN_BUILD_EXAMPLES=OFF \
+        -DONEDNN_BUILD_TESTS=OFF \
+        -DONEDNN_BUILD_GRAPH=OFF \
+        -DONEDNN_ENABLE_WORKLOAD=INFERENCE \
+        -DONEDNN_ENABLE_PRIMITIVE=MATMUL && \
+    cmake --build ./oneDNN/build --target install --config Release && \
+    cd vllm && \
+    VLLM_TARGET_DEVICE=cpu python setup.py install && \
+    rm -rf ./oneDNN ./vllm && \
+    apt-get purge -y cmake gcc-12 g++-12 && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+USER ray
+
+ADD --chown=ray:users serve.py /home/ray/serve.py
