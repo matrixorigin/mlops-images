@@ -1,9 +1,7 @@
 #!/bin/bash
 
-
 # 配置文件和路径
 LOG_FILE="/tmp/boot.log"
-
 
 # 函数: 捕获异常
 function try_catch() {
@@ -21,7 +19,7 @@ function init_jupyter() {
     echo '{"theme": "dark"}' > /root/.jupyter/lab/user-settings/@jupyterlab/terminal-extension/plugin.jupyterlab-settings
     echo '{"locale": "zh_CN"}' > /root/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings
 
-    cat <<EOF > /root/.jupyter/jupyter_config.py
+    cat << EOF > /root/.jupyter/jupyter_config.py
 c = get_config()
 
 c.ServerApp.ip = '0.0.0.0'
@@ -51,7 +49,7 @@ EOF
 function init_supervisor() {
     mkdir -p /init/supervisor
 
-    cat <<EOF > /init/supervisor/supervisor.ini
+    cat << EOF > /init/supervisor/supervisor.ini
 [supervisord]
 nodaemon=true
 logfile=/tmp/supervisord.log
@@ -80,6 +78,32 @@ autorestart=true
 stderr_logfile=/tmp/tensorboard.err.log
 stdout_logfile=/tmp/tensorboard.out.log
 
+EOF
+
+    if code-server --version > /dev/null 2>&1; then
+        cat << EOF >> /init/supervisor/supervisor.ini
+[program:code-server]
+command=/usr/bin/code-server --bind-addr 0.0.0.0:8889 --disable-telemetry --disable-update-check --disable-workspace-trust --disable-getting-started-override /root
+environment=PASSWORD=%(ENV_CODESERVER_PASSWORD)s
+autostart=true
+autorestart=true
+stderr_logfile=/tmp/code-server.err.log
+
+EOF
+    fi
+
+    if ray --version > /dev/null 2>&1; then
+        cat << EOF >> /init/supervisor/supervisor.ini
+[program:ray]
+command=bash -c 'if [ -n "\$KUBERAY_GEN_RAY_START_CMD" ]; then bash -lc "ulimit -n 65536; \$KUBERAY_GEN_RAY_START_CMD"; else bash -c "ulimit -n 65536; ray start --head --block --port=6379"; fi'
+autostart=true
+autorestart=true
+stderr_logfile=/tmp/ray.err.log
+
+EOF
+    fi
+
+    cat << EOF >> /init/supervisor/supervisor.ini
 [include]
 files=/etc/supervisord/supervisor-other.ini
 EOF
@@ -87,7 +111,7 @@ EOF
 
 # 初始化 MOTD
 function init_motd() {
-    cat <<EOF > /etc/matrixdc-motd
+    cat << EOF > /etc/matrixdc-motd
 #!/bin/bash
 
 printf "+----------------------------------------------------------------------------------------------------------------+\n"
@@ -170,7 +194,7 @@ function init_shutdown() {
         rm /usr/sbin/shutdown
     fi
 
-    cat <<EOF > /usr/bin/shutdown
+    cat << EOF > /usr/bin/shutdown
 #!/bin/bash
 rm -rf /root/.local/share/Trash
 ps -ef | grep supervisord | grep -v grep | awk '{print \$2}' | xargs kill
@@ -180,7 +204,7 @@ EOF
 
 # 初始化 Conda 源
 function init_conda_source() {
-    cat <<EOF > /root/.condarc
+    cat << EOF > /root/.condarc
 channels:
   - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
   - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
@@ -192,7 +216,7 @@ EOF
 
 # 初始化 pip 源
 function init_pip_source() {
-    cat <<EOF > /etc/pip.conf
+    cat << EOF > /etc/pip.conf
 [global]
 index-url = https://pypi.tuna.tsinghua.edu.cn/simple
 trusted-host = pypi.tuna.tsinghua.edu.cn
@@ -240,7 +264,6 @@ function init_ssh_config() {
     done
 }
 
-
 # 函数: 写入日志
 function log_info() {
     echo "$1" >> "$LOG_FILE"
@@ -270,9 +293,8 @@ function set_ssh_password() {
         log_info "passwd set finished"
     else
         log_info "Error: /sync/root-passwd file not found."
-    fi    
+    fi
 }
-
 
 # 函数: 创建 TensorBoard 日志目录
 function create_tensorboard_dir() {
@@ -288,8 +310,8 @@ function start_supervisord() {
         cp -f /init/bin/* /bin/
         if [ -f "/bin/supervisord" ]; then
             log_info "supervisord bin set finished"
-	      else
-	          log_info "supervisord bin not found"
+        else
+            log_info "supervisord bin not found"
         fi
     else
         log_info "/bin/supervisord文件存在"
@@ -298,7 +320,6 @@ function start_supervisord() {
     log_info "run supervisord begin"
     /bin/supervisord -c /init/supervisor/supervisor.ini
 }
-
 
 # 主程序
 function main() {
@@ -321,13 +342,12 @@ function main() {
 
         touch "$flag_file"
 
-	else
+    else
         echo "Ignore..."
-	fi
+    fi
 
-	start_supervisord
+    start_supervisord
 }
-
 
 # 执行主程序
 main
