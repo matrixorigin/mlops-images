@@ -1,0 +1,9 @@
+ARG BASE_IMAGE
+
+FROM ${BASE_IMAGE}
+
+# install vllm-cuda
+ARG VLLM_VERSION
+RUN pip --no-cache-dir install vllm==${VLLM_VERSION}
+
+ADD --chown=ray:users serve.py /home/ray/serve.py
