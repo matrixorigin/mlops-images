@@ -66,7 +66,5 @@
 2. 维护人员会将镜像同步到 matrixdc 的仓库组，完成工具镜像的发布
 
 ### 5. Neolink.AI 维护人员
-* 李恩志
-* 宋荣祥
-* 王磊
-
+* lienzhi@matrixorigin.cn
+* songrongxiang@matrixorigin.cn
